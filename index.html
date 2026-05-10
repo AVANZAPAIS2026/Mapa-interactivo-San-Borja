@@ -406,7 +406,7 @@ async function loadLotes() {
 }
 
 const defaultStyle = () => ({
-  color:'#252d3d', weight:.8, fillColor:'#1a2035', fillOpacity:.75,
+  color:'#252d3d', weight:.8, fillColor:'#1a2035', fillOpacity:.6,
 });
 
 function bindLoteEvents(feature, layer) {
@@ -705,7 +705,7 @@ function applyToMap() {
   // Colorear lotes
   lotesLayer.eachLayer(layer => {
     const s = layer.feature.properties._sector;
-    s ? layer.setStyle({ fillColor:SC[s], fillOpacity:.78, color:'#ffffff22', weight:.7 })
+    s ? layer.setStyle({ fillColor:SC[s], fillOpacity:.62, color:'#ffffff22', weight:.7 })
       : layer.setStyle(defaultStyle());
   });
 
