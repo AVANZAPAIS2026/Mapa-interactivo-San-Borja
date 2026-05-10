@@ -314,6 +314,7 @@ let lotesGeoJSON = null;
 let rows = [];
 let sectorCounts = {};
 let activeSource = 'sheets';   // 'sheets' | 'file'
+window._detectedSectorCol = null;
 
 // ══════════════════════════════════════════════════════
 //  TABS
@@ -583,25 +584,15 @@ function ingestRows(data, sourceName) {
   });
 
   const cols = Object.keys(rows[0] || {});
-  const sel = document.getElementById('col-sector');
-  sel.innerHTML = '';
-  cols.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    if (c.includes('sector')) o.selected = true;
-    sel.appendChild(o);
-  });
-
-  // Detectar automáticamente columna sector y aplicar
+  
+  // Detectar automáticamente columna sector
   let autoCol = null;
-  // Primero buscar columna con 'sector' en el nombre
   for (const c of cols) {
     if (c.toLowerCase().includes('sector')) {
       autoCol = c;
       break;
     }
   }
-  // Si no, buscar columna con números 1-12
   if (!autoCol) {
     for (const c of cols) {
       const values = rows.map(r => parseInt(r[c], 10)).filter(v => !isNaN(v) && v >= 1 && v <= 12);
@@ -611,12 +602,11 @@ function ingestRows(data, sourceName) {
       }
     }
   }
+  
   if (autoCol) {
-    sel.value = autoCol;
-    applyToMap(); // Aplicar automáticamente al mapa
+    window._detectedSectorCol = autoCol;
+    applyToMap();
   }
-
-  if (activeSource === 'file') setFstatus(`✓ ${rows.length} registros · "${sourceName}"`, false);
 }
 
 // ══════════════════════════════════════════════════════
@@ -629,8 +619,8 @@ function applyToMap() {
   if (!lotesGeoJSON) { alert('El archivo lotes.geojson no está cargado.'); return; }
   if (!rows.length)  { alert('Carga datos primero (Sheets o archivo).'); return; }
 
-  const colSector = document.getElementById('col-sector').value;
-  if (!colSector) { alert('Selecciona la columna de sector.'); return; }
+  const colSector = window._detectedSectorCol;
+  if (!colSector) { alert('No se pudo detectar la columna de sector.'); return; }
 
   if (puntosLayer) { map.removeLayer(puntosLayer); puntosLayer = null; }
   lotesGeoJSON.features.forEach(f => { delete f.properties._sector; delete f.properties._puntos; });
@@ -673,7 +663,7 @@ function applyToMap() {
   const markers = valid.map(row => {
     const lat    = parseFloat(row[COL.latitud]);
     const lon    = parseFloat(row[COL.longitud]);
-    const sector = parseInt(row[document.getElementById('col-sector').value], 10);
+    const sector = parseInt(row[colSector], 10);
     const color  = SC[sector] || '#aaa';
     const icon = L.divIcon({
       className:'',
