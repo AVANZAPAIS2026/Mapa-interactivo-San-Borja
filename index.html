@@ -34,7 +34,53 @@
 html, body { height:100%; font-family:var(--sans); background:var(--bg); color:var(--text); overflow:hidden; }
 
 /* ── LAYOUT ── */
-.app { display:grid; grid-template-columns:330px 1fr; grid-template-rows:52px 1fr; height:100vh; }
+.app { display:grid; grid-template-columns:330px 1fr; grid-template-rows:52px 1fr; height:100vh; position:relative; }
+
+.menu-btn {
+  display:none; align-items:center; gap:8px; padding:8px 12px; border:none;
+  border-radius:999px; background:rgba(59,141,232,.15); color:var(--text);
+  font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer;
+  transition:background .2s, transform .1s;
+}
+.menu-btn:hover { background:rgba(59,141,232,.25); }
+
+.sidebar-header {
+  display:flex; align-items:center; gap:10px; padding:14px 16px;
+  border-bottom:1px solid var(--border);
+}
+.sidebar-header .blk-title { margin-bottom:0; font-size:11px; }
+.menu-close {
+  margin-left:auto; padding:8px 10px; border:none; border-radius:9px;
+  background:transparent; color:var(--muted); font-size:14px; cursor:pointer;
+  transition:background .2s;
+}
+.menu-close:hover { background:rgba(255,255,255,.05); color:var(--text); }
+
+#sidebar-backdrop {
+  position:fixed; inset:52px 0 0 0; background:rgba(0,0,0,.35);
+  opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s,visibility .2s;
+  z-index:15;
+}
+
+@media (max-width: 900px) {
+  .app { grid-template-columns:1fr; padding-top:52px; }
+  header { position:fixed; top:0; left:0; right:0; z-index:10; }
+  .menu-btn { display:inline-flex; }
+  aside {
+    position:fixed; top:52px; left:0; bottom:0; width:280px; max-width:85vw;
+    border-right:1px solid var(--border); box-shadow:16px 0 45px rgba(0,0,0,.35);
+    transform:translateX(-100%); opacity:0; visibility:hidden;
+    transition:transform .25s ease, opacity .25s ease;
+    z-index:20;
+  }
+  body.sidebar-open aside {
+    transform:translateX(0); opacity:1; visibility:visible;
+  }
+  body.sidebar-open #sidebar-backdrop {
+    opacity:1; visibility:visible; pointer-events:auto;
+  }
+  #map { min-height: calc(100vh - 52px); }
+}
 
 /* ── HEADER ── */
 header {
@@ -247,11 +293,18 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
       <h1>Mapa interactivo San Borja</h1>
       <div class="district">Distrito de San Borja · Lima, Perú</div>
     </div>
+    <button id="menu-toggle" class="menu-btn" type="button" aria-expanded="false">☰ Menú</button>
     <div id="hdr-count">Sin datos</div>
   </header>
 
+  <div id="sidebar-backdrop"></div>
+
   <!-- SIDEBAR -->
   <aside>
+    <div class="sidebar-header">
+      <div class="blk-title">Menú</div>
+      <button id="menu-close" class="menu-close" type="button" aria-label="Cerrar menú">✕</button>
+    </div>
 
     <!-- 01: Fuente de datos -->
     <div class="blk" style="display:none">
@@ -513,6 +566,17 @@ window.openCardFromMap = (i) => {
   const latlng = [parseFloat(row[COL.latitud]), parseFloat(row[COL.longitud])];
   openSinglePopup(latlng, row, feature);
 };
+
+const menuToggle = document.getElementById('menu-toggle');
+const menuClose = document.getElementById('menu-close');
+const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+function updateMenuState(open) {
+  document.body.classList.toggle('sidebar-open', open);
+  menuToggle.setAttribute('aria-expanded', open);
+}
+menuToggle.addEventListener('click', () => updateMenuState(!document.body.classList.contains('sidebar-open')));
+menuClose.addEventListener('click', () => updateMenuState(false));
+sidebarBackdrop.addEventListener('click', () => updateMenuState(false));
 
 // ══════════════════════════════════════════════════════
 //  FUENTE: GOOGLE SHEETS
