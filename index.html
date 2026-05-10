@@ -381,7 +381,7 @@ function initMap() {
 
 async function loadLotes() {
   try {
-    const r = await fetch('data/lotes.geojson');
+    const r = await fetch('Data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson');
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     lotesGeoJSON = await r.json();
     lotesLayer = L.geoJSON(lotesGeoJSON, {
