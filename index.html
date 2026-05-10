@@ -438,17 +438,14 @@ function openMultiPopup(latlng, pts, feature) {
   const s = feature.properties._sector;
   const c = SC[s] || '#3b8de8';
   const cards = pts.map((row, i) => `
-    <div class="pm-card" onclick='openCardFromMap(${i})'>
+    <div class="pm-card" data-index="${i}">
       <div class="pm-act">${row[COL.actividad] || '—'}</div>
       <div class="pm-sub">${row[COL.fecha] || ''} · ${row[COL.responsable] || ''}</div>
     </div>`).join('');
 
-  // Guardar contexto para onclick
   window._multiCtx = { pts, feature };
 
-  L.popup({ maxWidth:300, minWidth:280 })
-   .setLatLng(latlng)
-   .setContent(`
+  const content = `
     <div>
       <div class="popup-header">
         <div class="popup-sector-badge" style="background:${c}">S${s}</div>
@@ -459,10 +456,25 @@ function openMultiPopup(latlng, pts, feature) {
       </div>
       <div class="popup-multi">
         <div class="pm-title">Selecciona un registro</div>
-        <div class="pm-list">${cards}</div>
+        <div class="pm-list" id="pm-list">${cards}</div>
       </div>
-    </div>`)
+    </div>`;
+
+  const popup = L.popup({ maxWidth:300, minWidth:280 })
+   .setLatLng(latlng)
+   .setContent(content)
    .openOn(map);
+
+  // Attachar listeners después de que el popup se abre
+  setTimeout(() => {
+    const pmCards = document.querySelectorAll('.pm-card');
+    pmCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const index = parseInt(card.dataset.index, 10);
+        window.openCardFromMap(index);
+      });
+    });
+  }, 10);
 }
 
 window.openCardFromMap = (i) => {
