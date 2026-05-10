@@ -318,13 +318,8 @@ let activeSource = 'sheets';   // 'sheets' | 'file'
 // ══════════════════════════════════════════════════════
 //  TABS
 // ══════════════════════════════════════════════════════
-document.querySelectorAll('.stab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeSource = btn.dataset.tab;
-  });
-});
+// Elementos .stab removidos - eventos deshabilitados
+// document.querySelectorAll('.stab').forEach(btn => { ... });
 
 // ══════════════════════════════════════════════════════
 //  MAPA
@@ -477,9 +472,10 @@ window.openCardFromMap = (i) => {
   openSinglePopup(latlng, row, feature);
 };
 
-const menuToggle = null;
-const menuClose = null;
-const sidebarBackdrop = null;
+// Elementos de menú removidos
+// const menuToggle = null;
+// const menuClose = null;
+// const sidebarBackdrop = null;
 
 // ══════════════════════════════════════════════════════
 //  FUENTE: GOOGLE SHEETS
@@ -512,19 +508,9 @@ async function fetchFromSheets(url) {
   }
 }
 
-document.getElementById('gs-url').addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    const url = document.getElementById('gs-url').value;
-    if (url) fetchFromSheets(url);
-  }
-});
-
-// Botón recargar (solo visible en modo Sheets)
-document.getElementById('btn-reload').addEventListener('click', () => {
-  const url = document.getElementById('gs-url').value;
-  if (!url) { setGsStatus('Pega primero la URL de tu Google Sheet.', 'err'); return; }
-  fetchFromSheets(url);
-});
+// Elementos del sidebar removidos - event listeners deshabilitados
+// document.getElementById('gs-url').addEventListener('keydown', ...
+// document.getElementById('btn-reload').addEventListener('click', ...
 
 function setGsStatus(msg, type) {
   const el = document.getElementById('gs-status');
@@ -535,16 +521,10 @@ function setGsStatus(msg, type) {
 // ══════════════════════════════════════════════════════
 //  FUENTE: ARCHIVO LOCAL
 // ══════════════════════════════════════════════════════
-const finput = document.getElementById('finput');
-const dz = document.getElementById('dz');
-
-finput.addEventListener('change', e => { if(e.target.files[0]) processFile(e.target.files[0]); });
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-dz.addEventListener('drop', e => {
-  e.preventDefault(); dz.classList.remove('over');
-  if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-});
+// Elementos de file upload removidos - eventos deshabilitados
+// const finput = document.getElementById('finput');
+// const dz = document.getElementById('dz');
+// ... event listeners deshabilitados
 
 function processFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
@@ -630,7 +610,8 @@ function ingestRows(data, sourceName) {
 // ══════════════════════════════════════════════════════
 //  APLICAR AL MAPA
 // ══════════════════════════════════════════════════════
-document.getElementById('btn-apply').addEventListener('click', applyToMap);
+// Elemento btn-apply removido - evento deshabilitado
+// document.getElementById('btn-apply').addEventListener('click', applyToMap);
 
 function applyToMap() {
   if (!lotesGeoJSON) { alert('El archivo lotes.geojson no está cargado.'); return; }
@@ -707,7 +688,7 @@ function applyToMap() {
 // ══════════════════════════════════════════════════════
 //  LIMPIAR
 // ══════════════════════════════════════════════════════
-document.getElementById('btn-clear').addEventListener('click', () => {
+function clearMap() {
   if (puntosLayer) { map.removeLayer(puntosLayer); puntosLayer = null; }
   if (lotesLayer) {
     lotesGeoJSON.features.forEach(f => { delete f.properties._sector; delete f.properties._puntos; });
@@ -719,7 +700,9 @@ document.getElementById('btn-clear').addEventListener('click', () => {
   document.getElementById('hdr-count').textContent =
     `${(lotesGeoJSON?.features?.length||0).toLocaleString()} lotes`;
   setLastUpdate(null);
-});
+}
+// Elemento btn-clear removido - función deshabilitada
+// document.getElementById('btn-clear').addEventListener('click', clearMap);
 
 // ══════════════════════════════════════════════════════
 //  LEYENDA
@@ -774,12 +757,7 @@ function setLastUpdate(source) {
 //  ARRANCAR
 // ══════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
-  // Mostrar/ocultar botón recargar según tab inicial
-// document.getElementById('src-sheets').style.display = 'flex';
-// document.getElementById('src-sheets').style.flexDirection = 'column';
-// document.getElementById('src-sheets').style.gap = '8px';
-// document.getElementById('src-file').style.display = 'none';
-// document.getElementById('btn-reload').style.display = 'block';
+
   initLegend();
   initMap();
 });
