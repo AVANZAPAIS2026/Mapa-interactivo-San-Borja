@@ -486,7 +486,11 @@ function bindLoteEvents(feature, layer) {
         : `Lote #${feature.properties._lote_idx ?? '—'} · Sin datos`;
       e.target.bindTooltip(tip, { className:'lt-tip', sticky:true }).openTooltip();
     },
-    mouseout(e) { lotesLayer.resetStyle(e.target); e.target.closeTooltip(); },
+    mouseout(e) { 
+      const s = e.target.feature.properties._sector;
+      e.target.setStyle(s ? { fillColor:SC[s], fillOpacity:.62, color:'#ffffff22', weight:.7 } : defaultStyle());
+      e.target.closeTooltip(); 
+    },
     click(e) {
       const pts = feature.properties._puntos;
       if (!pts?.length) return;
