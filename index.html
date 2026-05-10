@@ -635,11 +635,21 @@ function ingestRows(data, sourceName) {
 
   // Detectar automáticamente columna sector y aplicar
   let autoCol = null;
+  // Primero buscar columna con 'sector' en el nombre
   for (const c of cols) {
-    const values = rows.map(r => parseInt(r[c], 10)).filter(v => !isNaN(v) && v >= 1 && v <= 12);
-    if (values.length > rows.length * 0.5) { // Al menos 50% de valores válidos
+    if (c.toLowerCase().includes('sector')) {
       autoCol = c;
       break;
+    }
+  }
+  // Si no, buscar columna con números 1-12
+  if (!autoCol) {
+    for (const c of cols) {
+      const values = rows.map(r => parseInt(r[c], 10)).filter(v => !isNaN(v) && v >= 1 && v <= 12);
+      if (values.length > rows.length * 0.5) {
+        autoCol = c;
+        break;
+      }
     }
   }
   if (autoCol) {
