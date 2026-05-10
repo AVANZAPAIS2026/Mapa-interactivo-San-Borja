@@ -286,7 +286,6 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <script>
@@ -315,6 +314,11 @@ let rows = [];
 let sectorCounts = {};
 let activeSource = 'sheets';   // 'sheets' | 'file'
 window._detectedSectorCol = null;
+const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1195442176&single=true&output=csv';
+const GEOJSON_PATHS = [
+  'data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson',
+  'Data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson',
+];
 
 // ══════════════════════════════════════════════════════
 //  TABS
@@ -336,28 +340,58 @@ function initMap() {
 
 async function loadLotes() {
   try {
-    const r = await fetch('Data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    lotesGeoJSON = await r.json();
+    const loaded = await fetchFirstGeoJSON(GEOJSON_PATHS);
+    lotesGeoJSON = loaded.data;
     lotesLayer = L.geoJSON(lotesGeoJSON, {
       style: defaultStyle,
       onEachFeature: bindLoteEvents,
     }).addTo(map);
-    map.fitBounds(lotesLayer.getBounds(), { padding:[20,20] });
-    document.getElementById('hdr-count').textContent =
-      `${lotesGeoJSON.features.length.toLocaleString()} lotes`;
 
-    // Cargar automáticamente datos de Google Sheets
-    const sheetsUrl = document.getElementById('gs-url').value;
-    if (sheetsUrl) {
-      await fetchFromSheets(sheetsUrl);
+    if (lotesGeoJSON.features && lotesGeoJSON.features.length > 0) {
+      map.fitBounds(lotesLayer.getBounds(), { padding:[20,20] });
     }
+
+    document.getElementById('hdr-count').textContent =
+      `${lotesGeoJSON.features.length.toLocaleString()} lotes cargados`;
+    console.info(`GeoJSON cargado desde: ${loaded.path}`);
+
+    // Intentar cargar datos de Sheets por separado para que un error ahí no rompa el mapa
+    if (SHEETS_URL) {
+      fetchFromSheets(SHEETS_URL).catch(err => console.error("Error en Sheets:", err));
+    }
+
   } catch(e) {
-    document.getElementById('hdr-count').textContent = '⚠ GeoJSON no encontrado';
-    console.warn('lotes.geojson:', e.message);
+    document.getElementById('hdr-count').textContent = `⚠ ${e.message}`;
+    console.error('Detalle del error:', e);
   } finally {
     document.getElementById('loader').classList.add('gone');
   }
+}
+
+async function fetchFirstGeoJSON(paths) {
+  const errors = [];
+
+  for (const path of paths) {
+    try {
+      const resp = await fetch(path, { cache:'no-cache' });
+      if (!resp.ok) {
+        errors.push(`${path}: HTTP ${resp.status}`);
+        continue;
+      }
+
+      const data = await resp.json();
+      if (!data || !Array.isArray(data.features)) {
+        errors.push(`${path}: GeoJSON inválido`);
+        continue;
+      }
+
+      return { path, data };
+    } catch (err) {
+      errors.push(`${path}: ${err.message}`);
+    }
+  }
+
+  throw new Error(`GeoJSON no encontrado. Revisé: ${errors.join(' | ')}`);
 }
 
 const defaultStyle = () => ({
@@ -463,19 +497,20 @@ function openMultiPopup(latlng, pts, feature) {
 
   const popup = L.popup({ maxWidth:300, minWidth:280 })
    .setLatLng(latlng)
-   .setContent(content)
-   .openOn(map);
+   .setContent(content);
 
-  // Attachar listeners después de que el popup se abre
-  setTimeout(() => {
-    const pmCards = document.querySelectorAll('.pm-card');
+  popup.on('add', function() {
+    const root = popup.getElement();
+    const pmCards = root ? root.querySelectorAll('.pm-card') : [];
     pmCards.forEach(card => {
       card.addEventListener('click', () => {
         const index = parseInt(card.dataset.index, 10);
         window.openCardFromMap(index);
       });
     });
-  }, 10);
+  });
+
+  popup.openOn(map);
 }
 
 window.openCardFromMap = (i) => {
@@ -496,8 +531,12 @@ window.openCardFromMap = (i) => {
 async function fetchFromSheets(url) {
   setGsStatus('⏳ Conectando con Google Sheets…', 'loading');
   try {
+    // Si no se pasa URL, intentamos usar la constante global directamente
+    const targetUrl = url || SHEETS_URL;
+    if (!targetUrl) throw new Error("No se proporcionó una URL válida.");
+
     // Forzar formato CSV en la URL por si el usuario pegó otro formato
-    let csvUrl = url.trim();
+    let csvUrl = String(targetUrl).trim();
     if (csvUrl.includes('spreadsheets/d/') && !csvUrl.includes('output=csv')) {
       // Convertir URL de edición a URL de exportación CSV
       const idMatch = csvUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -521,14 +560,14 @@ async function fetchFromSheets(url) {
   }
 }
 
-// Elementos del sidebar removidos - event listeners deshabilitados
-// document.getElementById('gs-url').addEventListener('keydown', ...
-// document.getElementById('btn-reload').addEventListener('click', ...
+// Elementos del sidebar removidos - event listeners deshabilitados.
 
 function setGsStatus(msg, type) {
   const el = document.getElementById('gs-status');
-  el.textContent = msg;
-  el.className = type;
+  if (el) {
+    el.textContent = msg;
+    el.className = type;
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -548,23 +587,17 @@ function processFile(file) {
       complete(r) { ingestRows(r.data, file.name); setLastUpdate(file.name); },
       error(e)    { setFstatus('Error CSV: ' + e.message, true); },
     });
-  } else if (['xlsx','xls'].includes(ext)) {
-    const rd = new FileReader();
-    rd.onload = e => {
-      const wb = XLSX.read(e.target.result, { type:'binary' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      ingestRows(XLSX.utils.sheet_to_json(ws, { defval:'' }), file.name);
-      setLastUpdate(file.name);
-    };
-    rd.readAsBinaryString(file);
   } else {
-    setFstatus('Formato no soportado. Usa CSV o XLSX.', true);
+    setFstatus('Formato no soportado. Usa CSV.', true);
   }
 }
 
 function setFstatus(msg, isErr) {
   const el = document.getElementById('fstatus');
-  el.textContent = msg; el.className = isErr ? 'err' : 'ok';
+  if (el) {
+    el.textContent = msg;
+    el.className = isErr ? 'err' : 'ok';
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -616,11 +649,12 @@ function ingestRows(data, sourceName) {
 // document.getElementById('btn-apply').addEventListener('click', applyToMap);
 
 function applyToMap() {
-  if (!lotesGeoJSON) { alert('El archivo lotes.geojson no está cargado.'); return; }
+  if (!lotesGeoJSON) { alert('El GeoJSON de lotes todavía no está cargado.'); return; }
   if (!rows.length)  { alert('Carga datos primero (Sheets o archivo).'); return; }
 
-  const colSector = window._detectedSectorCol;
-  if (!colSector) { alert('No se pudo detectar la columna de sector.'); return; }
+  // Verificación robusta de la columna de sector
+  const colSector = window._detectedSectorCol || 'sector';
+  if (!colSector) { console.warn('No se pudo determinar la columna de sector.'); return; }
 
   if (puntosLayer) { map.removeLayer(puntosLayer); puntosLayer = null; }
   lotesGeoJSON.features.forEach(f => { delete f.properties._sector; delete f.properties._puntos; });
@@ -745,6 +779,8 @@ function initLegend() {
 function setLastUpdate(source) {
   const dot = document.getElementById('upd-dot');
   const txt = document.getElementById('upd-txt');
+  if (!dot || !txt) return;
+
   if (!source) {
     dot.className = 'upd-dot stale';
     txt.textContent = 'Sin datos cargados';
