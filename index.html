@@ -68,15 +68,15 @@ header {
   position:fixed; top:0; left:0; right:0; z-index:10;
   display:flex; flex-direction:column;
   background:var(--panel); border-bottom:1px solid var(--border);
-  height:120px; box-shadow:0 2px 8px rgba(0,0,0,.3);
+  height:100px; box-shadow:0 2px 8px rgba(0,0,0,.3);
 }
 .header-top {
-  display:flex; align-items:center; gap:12px;
-  padding:0 18px; height:60px;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 18px; height:50px;
 }
 .header-legend {
   padding:8px 18px; border-top:1px solid var(--border);
-  display:flex; align-items:center; gap:12px; height:60px;
+  display:flex; align-items:center; gap:12px; height:50px;
 }
 .header-legend .blk-title { margin:0; font-size:11px; }
 .header-legend .leg-grid { display:flex; gap:8px; flex-wrap:wrap; }
@@ -174,7 +174,7 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
 .leg-count { font-size:10px; color:var(--muted); font-family:var(--mono); }
 
 /* ── MAPA ── */
-#map { width:100%; height: calc(100vh - 120px); }
+#map { width:100%; height: calc(100vh - 100px); }
 
 /* Tooltip */
 .lt-tip {
@@ -267,9 +267,6 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
   <!-- HEADER -->
   <header>
     <div class="header-top">
-      <div class="logo-mark">
-        <img src="icono.png" alt="Icono San Borja" style="width:100%; height:100%; border-radius:7px; object-fit:cover;">
-      </div>
       <div>
         <h1>Mapa interactivo San Borja</h1>
         <div class="district">Distrito de San Borja · Lima, Perú</div>
