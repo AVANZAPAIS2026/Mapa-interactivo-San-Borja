@@ -37,79 +37,49 @@ html, body { height:100%; font-family:var(--sans); background:var(--bg); color:v
 .app { height:100vh; position:relative; }
 
 .menu-btn {
-  display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border:none;
-  border-radius:999px; background:rgba(59,141,232,.15); color:var(--text);
-  font-family:var(--sans); font-size:12px; font-weight:600; cursor:pointer;
-  transition:background .2s, transform .1s;
+  display:none;
 }
-.menu-btn:hover { background:rgba(59,141,232,.25); }
 
 .sidebar-header {
-  display:flex; align-items:center; gap:10px; padding:14px 16px;
-  border-bottom:1px solid var(--border);
+  display:none;
 }
-.sidebar-header .blk-title { margin-bottom:0; font-size:11px; }
+
 .menu-close {
-  margin-left:auto; padding:8px 10px; border:none; border-radius:9px;
-  background:transparent; color:var(--muted); font-size:14px; cursor:pointer;
-  transition:background .2s;
+  display:none;
 }
-.menu-close:hover { background:rgba(255,255,255,.05); color:var(--text); }
 
 #sidebar-backdrop {
-  position:fixed; inset:52px 0 0 0; background:rgba(0,0,0,.35);
-  opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s,visibility .2s;
-  z-index:15;
-}
-
-@media (max-width: 768px) {
-  #sidebar-backdrop { inset:56px 0 0 0; }
+  display:none;
 }
 
 aside {
-  position:fixed; top:52px; left:0; bottom:0; width:280px; max-width:85vw;
-  background:var(--panel); border-right:1px solid var(--border);
-  transform:translateX(-100%); opacity:0; visibility:hidden;
-  transition:transform .25s ease, opacity .25s ease;
-  z-index:20; overflow:hidden; display:flex; flex-direction:column;
-  box-shadow:16px 0 45px rgba(0,0,0,.35);
-}
-
-@media (max-width: 768px) {
-  aside { top:56px; }
+  display:none;
 }
 
 body.sidebar-open aside {
-  transform:translateX(0); opacity:1; visibility:visible;
+  display:none;
 }
 body.sidebar-open #sidebar-backdrop {
-  opacity:1; visibility:visible; pointer-events:auto;
+  display:none;
 }
 
 /* ── HEADER ── */
 header {
   position:fixed; top:0; left:0; right:0; z-index:10;
+  display:flex; flex-direction:column;
+  background:var(--panel); border-bottom:1px solid var(--border);
+  height:120px; box-shadow:0 2px 8px rgba(0,0,0,.3);
+}
+.header-top {
   display:flex; align-items:center; gap:12px;
-  padding:0 18px; background:var(--panel); border-bottom:1px solid var(--border);
-  height:52px; box-shadow:0 2px 8px rgba(0,0,0,.3);
+  padding:0 18px; height:60px;
 }
-.logo-mark {
-  width:30px; height:30px; border-radius:7px;
-  display:grid; place-items:center; flex-shrink:0;
+.header-legend {
+  padding:8px 18px; border-top:1px solid var(--border);
+  display:flex; align-items:center; gap:12px; height:60px;
 }
-.logo-mark svg { width:15px; height:15px; fill:#fff; }
-header h1 { font-size:14px; font-weight:600; }
-header .district { font-size:11px; color:var(--muted); font-family:var(--mono); }
-#hdr-count { margin-left:auto; font-size:11px; color:var(--muted); font-family:var(--mono); white-space:nowrap; }
-
-@media (max-width: 768px) {
-  header { height:56px; padding:0 12px; gap:8px; box-shadow:0 2px 8px rgba(0,0,0,.3); }
-  .logo-mark { width:32px; height:32px; }
-  header h1 { font-size:13px; }
-  header .district { font-size:10px; }
-  #hdr-count { font-size:10px; }
-  .menu-btn { font-size:11px; padding:6px 10px; }
-}
+.header-legend .blk-title { margin:0; font-size:11px; }
+.header-legend .leg-grid { display:flex; gap:8px; flex-wrap:wrap; }
 
 /* ── SIDEBAR ── */
 aside { background:var(--panel); border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
@@ -204,11 +174,7 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
 .leg-count { font-size:10px; color:var(--muted); font-family:var(--mono); }
 
 /* ── MAPA ── */
-#map { width:100%; height: calc(100vh - 52px); }
-
-@media (max-width: 768px) {
-  #map { height: calc(100vh - 56px); }
-}
+#map { width:100%; height: calc(100vh - 120px); }
 
 /* Tooltip */
 .lt-tip {
@@ -300,87 +266,21 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
 
   <!-- HEADER -->
   <header>
-    <div class="logo-mark">
-      <img src="icono.png" alt="Icono San Borja" style="width:100%; height:100%; border-radius:7px; object-fit:cover;">
-    </div>
-    <div>
-      <h1>Mapa interactivo San Borja</h1>
-      <div class="district">Distrito de San Borja · Lima, Perú</div>
-    </div>
-    <button id="menu-toggle" class="menu-btn" type="button" aria-expanded="false">☰ Menú</button>
-    <div id="hdr-count">Sin datos</div>
-  </header>
-
-  <div id="sidebar-backdrop"></div>
-
-  <!-- SIDEBAR -->
-  <aside>
-    <div class="sidebar-header">
-      <div class="blk-title">Menú</div>
-      <button id="menu-close" class="menu-close" type="button" aria-label="Cerrar menú">✕</button>
-    </div>
-
-    <!-- 01: Fuente de datos -->
-    <div class="blk" style="display:none">
-      <div class="blk-title">01 · Fuente de datos</div>
-
-      <!-- Tabs -->
-      <div class="source-tabs">
-        <button class="stab active" data-tab="sheets">🔗 Google Sheets</button>
-        <button class="stab"        data-tab="file"  >📂 Archivo local</button>
+    <div class="header-top">
+      <div class="logo-mark">
+        <img src="icono.png" alt="Icono San Borja" style="width:100%; height:100%; border-radius:7px; object-fit:cover;">
       </div>
-
-      <!-- Tab: Google Sheets -->
-      <div id="src-sheets">
-        <div class="gs-hint" style="margin-bottom:8px">
-          En Google Sheets: <b>Archivo → Compartir → Publicar en la web</b><br>
-          Selecciona <b>Hoja1</b> y formato <b>CSV</b>. Pega el enlace abajo.
-        </div>
-        <div class="gs-input-wrap">
-          <input type="text" id="gs-url" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1195442176&single=true&output=csv" placeholder="https://docs.google.com/spreadsheets/d/…/pub?output=csv"/>
-        </div>
-        <div id="gs-status"></div>
+      <div>
+        <h1>Mapa interactivo San Borja</h1>
+        <div class="district">Distrito de San Borja · Lima, Perú</div>
       </div>
-
-      <!-- Tab: Archivo local -->
-      <div id="src-file">
-        <div class="dz" id="dz">
-          <input type="file" id="finput" accept=".csv,.xlsx,.xls"/>
-          <div class="dz-ico">📂</div>
-          <div class="dz-lbl">Arrastra tu archivo aquí</div>
-          <div class="dz-sub">CSV · XLSX · XLS</div>
-        </div>
-        <div id="fstatus"></div>
-      </div>
+      <div id="hdr-count">Sin datos</div>
     </div>
-
-    <!-- 02: Columna sector + botones -->
-    <div class="blk">
-      <div class="blk-title">02 · Columna de sector (1–12)</div>
-      <div class="field" style="margin-bottom:12px; display:none">
-        <label>Campo que indica el número de sector</label>
-        <select id="col-sector">
-          <option value="">— Carga datos primero —</option>
-        </select>
-      </div>
-      <button class="btn btn-go"    id="btn-apply" style="display:none">⚡ Aplicar al mapa</button>
-      <button class="btn btn-reload" id="btn-reload" style="display:none">↻ Recargar desde Sheets</button>
-      <button class="btn btn-clr"   id="btn-clear" >✕ Limpiar mapa</button>
-    </div>
-
-    <!-- Leyenda -->
-    <div id="legend-wrap">
+    <div class="header-legend">
       <div class="blk-title">Sectores</div>
       <div class="leg-grid" id="leg-grid"></div>
     </div>
-
-    <!-- Última actualización -->
-    <div id="last-update">
-      <div class="upd-dot stale" id="upd-dot"></div>
-      <span id="upd-txt">Sin datos cargados</span>
-    </div>
-
-  </aside>
+  </header>
 
   <!-- MAPA -->
   <div id="map"></div>
@@ -426,11 +326,6 @@ document.querySelectorAll('.stab').forEach(btn => {
     document.querySelectorAll('.stab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeSource = btn.dataset.tab;
-    document.getElementById('src-sheets').style.display = activeSource === 'sheets' ? 'flex' : 'none';
-    document.getElementById('src-file').style.display   = activeSource === 'file'   ? 'block' : 'none';
-    document.getElementById('btn-reload').style.display = activeSource === 'sheets' ? 'block' : 'none';
-    document.getElementById('src-sheets').style.flexDirection = 'column';
-    document.getElementById('src-sheets').style.gap = '8px';
   });
 });
 
@@ -585,16 +480,9 @@ window.openCardFromMap = (i) => {
   openSinglePopup(latlng, row, feature);
 };
 
-const menuToggle = document.getElementById('menu-toggle');
-const menuClose = document.getElementById('menu-close');
-const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-function updateMenuState(open) {
-  document.body.classList.toggle('sidebar-open', open);
-  menuToggle.setAttribute('aria-expanded', open);
-}
-menuToggle.addEventListener('click', () => updateMenuState(!document.body.classList.contains('sidebar-open')));
-menuClose.addEventListener('click', () => updateMenuState(false));
-sidebarBackdrop.addEventListener('click', () => updateMenuState(false));
+const menuToggle = null;
+const menuClose = null;
+const sidebarBackdrop = null;
 
 // ══════════════════════════════════════════════════════
 //  FUENTE: GOOGLE SHEETS
@@ -890,11 +778,11 @@ function setLastUpdate(source) {
 // ══════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   // Mostrar/ocultar botón recargar según tab inicial
-  document.getElementById('src-sheets').style.display = 'flex';
-  document.getElementById('src-sheets').style.flexDirection = 'column';
-  document.getElementById('src-sheets').style.gap = '8px';
-  document.getElementById('src-file').style.display = 'none';
-  document.getElementById('btn-reload').style.display = 'block';
+// document.getElementById('src-sheets').style.display = 'flex';
+// document.getElementById('src-sheets').style.flexDirection = 'column';
+// document.getElementById('src-sheets').style.gap = '8px';
+// document.getElementById('src-file').style.display = 'none';
+// document.getElementById('btn-reload').style.display = 'block';
   initLegend();
   initMap();
 });
