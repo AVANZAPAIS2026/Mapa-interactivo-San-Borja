@@ -232,7 +232,7 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
 </head>
 <body>
 
-<div id="loader"><div><div class="spin"></div><div class="spin-txt">Cargando lotes…</div></div></div>
+<div id="loader"><div><div class="spin"></div><div class="spin-txt">Cargando mapa y datos…</div></div></div>
 
 <div class="app">
 
@@ -254,7 +254,7 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
   <aside>
 
     <!-- 01: Fuente de datos -->
-    <div class="blk">
+    <div class="blk" style="display:none">
       <div class="blk-title">01 · Fuente de datos</div>
 
       <!-- Tabs -->
@@ -297,7 +297,7 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
         </select>
       </div>
       <button class="btn btn-go"    id="btn-apply" >⚡ Aplicar al mapa</button>
-      <button class="btn btn-reload" id="btn-reload">↻ Recargar desde Sheets</button>
+      <button class="btn btn-reload" id="btn-reload" style="display:none">↻ Recargar desde Sheets</button>
       <button class="btn btn-clr"   id="btn-clear" >✕ Limpiar mapa</button>
     </div>
 
@@ -391,6 +391,12 @@ async function loadLotes() {
     map.fitBounds(lotesLayer.getBounds(), { padding:[20,20] });
     document.getElementById('hdr-count').textContent =
       `${lotesGeoJSON.features.length.toLocaleString()} lotes`;
+
+    // Cargar automáticamente datos de Google Sheets
+    const sheetsUrl = document.getElementById('gs-url').value;
+    if (sheetsUrl) {
+      await fetchFromSheets(sheetsUrl);
+    }
   } catch(e) {
     document.getElementById('hdr-count').textContent = '⚠ GeoJSON no encontrado';
     console.warn('lotes.geojson:', e.message);
