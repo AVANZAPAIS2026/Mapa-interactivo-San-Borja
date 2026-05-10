@@ -290,13 +290,13 @@ aside { background:var(--panel); border-right:1px solid var(--border); display:f
     <!-- 02: Columna sector + botones -->
     <div class="blk">
       <div class="blk-title">02 · Columna de sector (1–12)</div>
-      <div class="field" style="margin-bottom:12px">
+      <div class="field" style="margin-bottom:12px; display:none">
         <label>Campo que indica el número de sector</label>
         <select id="col-sector">
           <option value="">— Carga datos primero —</option>
         </select>
       </div>
-      <button class="btn btn-go"    id="btn-apply" >⚡ Aplicar al mapa</button>
+      <button class="btn btn-go"    id="btn-apply" style="display:none">⚡ Aplicar al mapa</button>
       <button class="btn btn-reload" id="btn-reload" style="display:none">↻ Recargar desde Sheets</button>
       <button class="btn btn-clr"   id="btn-clear" >✕ Limpiar mapa</button>
     </div>
@@ -632,6 +632,20 @@ function ingestRows(data, sourceName) {
     if (c.includes('sector')) o.selected = true;
     sel.appendChild(o);
   });
+
+  // Detectar automáticamente columna sector y aplicar
+  let autoCol = null;
+  for (const c of cols) {
+    const values = rows.map(r => parseInt(r[c], 10)).filter(v => !isNaN(v) && v >= 1 && v <= 12);
+    if (values.length > rows.length * 0.5) { // Al menos 50% de valores válidos
+      autoCol = c;
+      break;
+    }
+  }
+  if (autoCol) {
+    sel.value = autoCol;
+    applyToMap(); // Aplicar automáticamente al mapa
+  }
 
   if (activeSource === 'file') setFstatus(`✓ ${rows.length} registros · "${sourceName}"`, false);
 }
