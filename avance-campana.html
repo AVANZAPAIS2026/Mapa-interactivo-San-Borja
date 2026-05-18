@@ -69,8 +69,8 @@
       actividad: 'actividad',
     };
 
-    const LOT_FILL = '#DB1774';
-    const LOT_STROKE = '#303E7F';
+    const GEOJSON_LAYER_COLOR = '#303E7F';
+    const LOT_FILL_COLOR = '#DB1774';
     const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1195442176&single=true&output=csv';
     const GEOJSON_PATHS = [
       'data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson',
@@ -99,7 +99,7 @@
         const loaded = await fetchFirstGeoJSON(GEOJSON_PATHS);
         lotesGeoJSON = loaded.data;
         lotesLayer = L.geoJSON(lotesGeoJSON, {
-          style: defaultStyle,
+          style: loteStyle,
           onEachFeature: bindLoteEvents,
         }).addTo(map);
 
@@ -144,21 +144,12 @@
       throw new Error(`GeoJSON no encontrado. Revisé: ${errors.join(' | ')}`);
     }
 
-    function defaultStyle() {
+    function loteStyle() {
       return {
-        color: LOT_STROKE,
+        color: GEOJSON_LAYER_COLOR,
         weight: .8,
-        fillColor: LOT_FILL,
+        fillColor: LOT_FILL_COLOR,
         fillOpacity: .6,
-      };
-    }
-
-    function dataStyle() {
-      return {
-        color: LOT_STROKE,
-        weight: .7,
-        fillColor: LOT_FILL,
-        fillOpacity: .62,
       };
     }
 
@@ -166,14 +157,14 @@
       layer.on({
         mouseover(e) {
           const s = feature.properties._sector;
-          e.target.setStyle({ weight: 2, color: LOT_STROKE, fillColor: LOT_FILL, fillOpacity: .92 });
+          e.target.setStyle({ weight: 2, color: GEOJSON_LAYER_COLOR, fillColor: LOT_FILL_COLOR, fillOpacity: .92 });
           const tip = s
             ? `<b>Sector ${s}</b> · Lote #${feature.properties._lote_idx ?? '-'}<br>${feature.properties._puntos?.length ?? 0} registro(s)`
             : `Lote #${feature.properties._lote_idx ?? '-'} · Sin datos`;
           e.target.bindTooltip(tip, { className: 'lt-tip', sticky: true }).openTooltip();
         },
         mouseout(e) {
-          e.target.setStyle(e.target.feature.properties._sector ? dataStyle() : defaultStyle());
+          e.target.setStyle(loteStyle());
           e.target.closeTooltip();
         },
         click(e) {
@@ -370,7 +361,7 @@
       });
 
       lotesLayer.eachLayer(layer => {
-        layer.setStyle(layer.feature.properties._sector ? dataStyle() : defaultStyle());
+        layer.setStyle(loteStyle());
       });
 
       const markers = valid.map(row => {
@@ -379,7 +370,7 @@
         const sector = parseInt(row[colSector], 10);
         const icon = L.divIcon({
           className: '',
-          html: `<div style="width:9px;height:9px;border-radius:50%;background:${LOT_FILL};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
+          html: `<div style="width:9px;height:9px;border-radius:50%;background:${LOT_FILL_COLOR};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
           iconSize: [9, 9],
           iconAnchor: [4, 4],
         });
