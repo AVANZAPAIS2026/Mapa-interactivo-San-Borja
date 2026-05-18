@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Roberth Montoya | Avance Campaña</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body class="map-page">
+  <nav class="site-nav" aria-label="Navegación principal">
+    <div class="nav-inner">
+      <a class="brand" href="index.html" aria-label="Ir al inicio">
+        <span class="brand-mark">RM</span>
+        <span>Roberth Montoya</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-menu">
+        <li><a class="nav-link" href="index.html">Inicio</a></li>
+        <li><a class="nav-link active" href="avance-campana.html" aria-current="page">Avance Campaña</a></li>
+        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Zonificación</span></li>
+        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Sectores y Sub-sectores</span></li>
+        <li><a class="nav-link" href="oposicion.html">Oposición</a></li>
+        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Actividades</span></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div id="loader"><div><div class="spin"></div><div class="spin-txt">Cargando mapa y datos...</div></div></div>
+
+  <header class="map-header">
+    <div class="map-header-top">
+      <div class="map-title">
+        <h1>Avance Campaña</h1>
+        <div class="district">Distrito de San Borja · Lima, Perú</div>
+      </div>
+      <div id="hdr-count">Sin datos</div>
+    </div>
+    <div class="header-legend">
+      <div class="blk-title">Sectores</div>
+      <div class="leg-grid" id="leg-grid"></div>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script>
+    // Control del menú responsive compartido.
+    const nav = document.querySelector('.site-nav');
+    const toggle = document.querySelector('.nav-toggle');
+    toggle.addEventListener('click', () => {
+      const isOpen = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    // Columnas esperadas de la hoja, normalizadas a minúsculas y sin tildes.
+    const COL = {
+      fecha: 'fecha',
+      latitud: 'latitud',
+      longitud: 'longitud',
+      direccion: 'direccion',
+      responsable: 'responsable',
+      participantes: 'participantes',
+      actividad: 'actividad',
+    };
+
+    const LOT_FILL = '#DB1774';
+    const LOT_STROKE = '#303E7F';
+    const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1195442176&single=true&output=csv';
+    const GEOJSON_PATHS = [
+      'data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson',
+    ];
+
+    let map, lotesLayer, puntosLayer;
+    let lotesGeoJSON = null;
+    let rows = [];
+    let sectorCounts = {};
+    window._detectedSectorCol = null;
+
+    function initMap() {
+      map = L.map('map', { zoomControl: true, preferCanvas: true })
+        .setView([-12.105, -76.990], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      loadLotes();
+    }
+
+    async function loadLotes() {
+      try {
+        const loaded = await fetchFirstGeoJSON(GEOJSON_PATHS);
+        lotesGeoJSON = loaded.data;
+        lotesLayer = L.geoJSON(lotesGeoJSON, {
+          style: defaultStyle,
+          onEachFeature: bindLoteEvents,
+        }).addTo(map);
+
+        if (lotesGeoJSON.features && lotesGeoJSON.features.length > 0) {
+          map.fitBounds(lotesLayer.getBounds(), { padding: [20, 20] });
+        }
+
+        document.getElementById('hdr-count').textContent =
+          `${lotesGeoJSON.features.length.toLocaleString()} lotes cargados`;
+        console.info(`GeoJSON cargado desde: ${loaded.path}`);
+
+        if (SHEETS_URL) {
+          fetchFromSheets(SHEETS_URL).catch(err => console.error('Error en Sheets:', err));
+        }
+      } catch (e) {
+        document.getElementById('hdr-count').textContent = `Error: ${e.message}`;
+        console.error('Detalle del error:', e);
+      } finally {
+        document.getElementById('loader').classList.add('gone');
+      }
+    }
+
+    async function fetchFirstGeoJSON(paths) {
+      const errors = [];
+      for (const path of paths) {
+        try {
+          const resp = await fetch(path, { cache: 'no-cache' });
+          if (!resp.ok) {
+            errors.push(`${path}: HTTP ${resp.status}`);
+            continue;
+          }
+          const data = await resp.json();
+          if (!data || !Array.isArray(data.features)) {
+            errors.push(`${path}: GeoJSON inválido`);
+            continue;
+          }
+          return { path, data };
+        } catch (err) {
+          errors.push(`${path}: ${err.message}`);
+        }
+      }
+      throw new Error(`GeoJSON no encontrado. Revisé: ${errors.join(' | ')}`);
+    }
+
+    function defaultStyle() {
+      return {
+        color: LOT_STROKE,
+        weight: .8,
+        fillColor: LOT_FILL,
+        fillOpacity: .6,
+      };
+    }
+
+    function dataStyle() {
+      return {
+        color: LOT_STROKE,
+        weight: .7,
+        fillColor: LOT_FILL,
+        fillOpacity: .62,
+      };
+    }
+
+    function bindLoteEvents(feature, layer) {
+      layer.on({
+        mouseover(e) {
+          const s = feature.properties._sector;
+          e.target.setStyle({ weight: 2, color: LOT_STROKE, fillColor: LOT_FILL, fillOpacity: .92 });
+          const tip = s
+            ? `<b>Sector ${s}</b> · Lote #${feature.properties._lote_idx ?? '-'}<br>${feature.properties._puntos?.length ?? 0} registro(s)`
+            : `Lote #${feature.properties._lote_idx ?? '-'} · Sin datos`;
+          e.target.bindTooltip(tip, { className: 'lt-tip', sticky: true }).openTooltip();
+        },
+        mouseout(e) {
+          e.target.setStyle(e.target.feature.properties._sector ? dataStyle() : defaultStyle());
+          e.target.closeTooltip();
+        },
+        click(e) {
+          const pts = feature.properties._puntos;
+          if (!pts?.length) return;
+          pts.length === 1
+            ? openSinglePopup(e.latlng, pts[0], feature)
+            : openMultiPopup(e.latlng, pts, feature);
+        },
+      });
+    }
+
+    function openSinglePopup(latlng, row, feature) {
+      const s = feature.properties._sector || '-';
+      const lat = parseFloat(row[COL.latitud]).toFixed(5);
+      const lon = parseFloat(row[COL.longitud]).toFixed(5);
+
+      L.popup({ maxWidth: 300, minWidth: 280 })
+        .setLatLng(latlng)
+        .setContent(`
+          <div>
+            <div class="popup-header">
+              <div class="popup-sector-badge">S${s}</div>
+              <div class="popup-header-info">
+                <div class="ph-label">Sector ${s} · Lote #${feature.properties._lote_idx ?? '-'}</div>
+                <div class="ph-title">${row[COL.actividad] || 'Sin actividad'}</div>
+              </div>
+            </div>
+            <div class="popup-body">
+              <div class="popup-row">
+                <div class="pr-icon">F</div>
+                <div class="pr-content"><div class="pr-key">Fecha</div><div class="pr-val">${row[COL.fecha] || '-'}</div></div>
+              </div>
+              <div class="popup-row">
+                <div class="pr-icon">D</div>
+                <div class="pr-content"><div class="pr-key">Dirección</div><div class="pr-val">${row[COL.direccion] || '-'}</div></div>
+              </div>
+              <div class="popup-row">
+                <div class="pr-icon">R</div>
+                <div class="pr-content"><div class="pr-key">Responsable</div><div class="pr-val">${row[COL.responsable] || '-'}</div></div>
+              </div>
+              <div class="popup-row">
+                <div class="pr-icon">P</div>
+                <div class="pr-content"><div class="pr-key">Participantes</div><div class="pr-val">${row[COL.participantes] || '-'}</div></div>
+              </div>
+            </div>
+            <div class="popup-footer">
+              <span class="pf-coords">${lat}, ${lon}</span>
+              <span class="pf-lote">Lote #${feature.properties._lote_idx ?? '-'}</span>
+            </div>
+          </div>`)
+        .openOn(map);
+    }
+
+    function openMultiPopup(latlng, pts, feature) {
+      const s = feature.properties._sector || '-';
+      const cards = pts.map((row, i) => `
+        <div class="pm-card" data-index="${i}">
+          <div class="pm-act">${row[COL.actividad] || '-'}</div>
+          <div class="pm-sub">${row[COL.fecha] || ''} · ${row[COL.responsable] || ''}</div>
+        </div>`).join('');
+
+      window._multiCtx = { pts, feature };
+
+      const popup = L.popup({ maxWidth: 300, minWidth: 280 })
+        .setLatLng(latlng)
+        .setContent(`
+          <div>
+            <div class="popup-header">
+              <div class="popup-sector-badge">S${s}</div>
+              <div class="popup-header-info">
+                <div class="ph-label">Sector ${s} · Lote #${feature.properties._lote_idx ?? '-'}</div>
+                <div class="ph-title">${pts.length} registros en este lote</div>
+              </div>
+            </div>
+            <div class="popup-multi">
+              <div class="pm-title">Selecciona un registro</div>
+              <div class="pm-list" id="pm-list">${cards}</div>
+            </div>
+          </div>`);
+
+      popup.on('add', function() {
+        const root = popup.getElement();
+        const pmCards = root ? root.querySelectorAll('.pm-card') : [];
+        pmCards.forEach(card => {
+          card.addEventListener('click', () => {
+            const index = parseInt(card.dataset.index, 10);
+            window.openCardFromMap(index);
+          });
+        });
+      });
+
+      popup.openOn(map);
+    }
+
+    window.openCardFromMap = (i) => {
+      const { pts, feature } = window._multiCtx;
+      const row = pts[i];
+      const latlng = [parseFloat(row[COL.latitud]), parseFloat(row[COL.longitud])];
+      openSinglePopup(latlng, row, feature);
+    };
+
+    async function fetchFromSheets(url) {
+      try {
+        const targetUrl = normalizeSheetsUrl(url);
+        const resp = await fetch(targetUrl, { cache: 'no-cache' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const text = await resp.text();
+        const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter: '' });
+        if (!parsed.data.length) throw new Error('La hoja está vacía o el formato no es correcto.');
+
+        ingestRows(parsed.data, 'Google Sheets');
+      } catch (e) {
+        console.error(`Error al cargar Google Sheets: ${e.message}`);
+      }
+    }
+
+    function normalizeSheetsUrl(url) {
+      const value = String(url || '').trim();
+      if (!value) throw new Error('No se proporcionó una URL válida.');
+      if (value.includes('/pub?') || value.includes('output=csv') || value.includes('output=tsv')) return value;
+      const idMatch = value.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      return idMatch ? `https://docs.google.com/spreadsheets/d/${idMatch[1]}/export?format=csv` : value;
+    }
+
+    function norm(k) {
+      return k.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '_').trim();
+    }
+
+    function ingestRows(data, sourceName) {
+      rows = data.map(r => {
+        const o = {};
+        for (const k in r) o[norm(k)] = r[k];
+        return o;
+      });
+
+      const cols = Object.keys(rows[0] || {});
+      let autoCol = cols.find(c => c.toLowerCase().includes('sector')) || null;
+      if (!autoCol) {
+        for (const c of cols) {
+          const values = rows.map(r => parseInt(r[c], 10)).filter(v => !isNaN(v) && v >= 1 && v <= 12);
+          if (values.length > rows.length * .5) {
+            autoCol = c;
+            break;
+          }
+        }
+      }
+
+      if (autoCol) {
+        window._detectedSectorCol = autoCol;
+        applyToMap();
+      }
+    }
+
+    function applyToMap() {
+      if (!lotesGeoJSON || !rows.length) return;
+
+      const colSector = window._detectedSectorCol || 'sector';
+      if (puntosLayer) {
+        map.removeLayer(puntosLayer);
+        puntosLayer = null;
+      }
+
+      lotesGeoJSON.features.forEach(f => {
+        delete f.properties._sector;
+        delete f.properties._puntos;
+      });
+      sectorCounts = {};
+
+      const valid = rows.filter(r => !isNaN(parseFloat(r[COL.latitud])) && !isNaN(parseFloat(r[COL.longitud])));
+
+      valid.forEach(row => {
+        const lat = parseFloat(row[COL.latitud]);
+        const lon = parseFloat(row[COL.longitud]);
+        const sector = parseInt(row[colSector], 10);
+        if (isNaN(sector) || sector < 1 || sector > 12) return;
+
+        const pt = turf.point([lon, lat]);
+        for (const feat of lotesGeoJSON.features) {
+          try {
+            if (turf.booleanPointInPolygon(pt, feat)) {
+              if (!feat.properties._puntos) {
+                feat.properties._puntos = [];
+                feat.properties._sector = sector;
+              }
+              feat.properties._puntos.push(row);
+              sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
+              break;
+            }
+          } catch (_) {}
+        }
+      });
+
+      lotesLayer.eachLayer(layer => {
+        layer.setStyle(layer.feature.properties._sector ? dataStyle() : defaultStyle());
+      });
+
+      const markers = valid.map(row => {
+        const lat = parseFloat(row[COL.latitud]);
+        const lon = parseFloat(row[COL.longitud]);
+        const sector = parseInt(row[colSector], 10);
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="width:9px;height:9px;border-radius:50%;background:${LOT_FILL};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
+          iconSize: [9, 9],
+          iconAnchor: [4, 4],
+        });
+        const m = L.marker([lat, lon], { icon });
+        m.bindTooltip(`<b>Sector ${sector}</b> · ${row[COL.actividad] || '-'}`, { className: 'lt-tip', sticky: true });
+        m.on('click', () => {
+          const feat = lotesGeoJSON.features.find(f => f.properties._puntos?.includes(row));
+          if (feat) openSinglePopup([lat, lon], row, feat);
+        });
+        return m;
+      });
+
+      puntosLayer = L.layerGroup(markers).addTo(map);
+      renderLegend();
+
+      const lotes = lotesGeoJSON.features.filter(f => f.properties._sector).length;
+      document.getElementById('hdr-count').textContent =
+        `${lotesGeoJSON.features.length.toLocaleString()} lotes · ${valid.length} puntos · ${lotes} coloreados`;
+    }
+
+    function renderLegend() {
+      const grid = document.getElementById('leg-grid');
+      grid.innerHTML = '';
+      for (let s = 1; s <= 12; s++) {
+        const n = sectorCounts[s] || 0;
+        const div = document.createElement('div');
+        div.className = 'leg-item' + (n ? ' active' : '');
+        div.innerHTML = `
+          <div class="leg-dot"></div>
+          <div>
+            <div class="leg-name">Sector ${s}</div>
+            <div class="leg-count">${n ? `${n} punto${n !== 1 ? 's' : ''}` : '-'}</div>
+          </div>`;
+        grid.appendChild(div);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderLegend();
+      initMap();
+    });
+  </script>
+</body>
+</html>

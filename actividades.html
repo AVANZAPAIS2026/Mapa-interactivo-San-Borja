@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Roberth Montoya | Actividades</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+  <nav class="site-nav" aria-label="Navegación principal">
+    <div class="nav-inner">
+      <a class="brand" href="index.html" aria-label="Ir al inicio">
+        <span class="brand-mark">RM</span>
+        <span>Roberth Montoya</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-menu">
+        <li><a class="nav-link" href="index.html">Inicio</a></li>
+        <li><a class="nav-link" href="avance-campana.html">Avance Campaña</a></li>
+        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Zonificación</span></li>
+        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Sectores y Sub-sectores</span></li>
+        <li><a class="nav-link" href="oposicion.html">Oposición</a></li>
+        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled active" aria-current="page">Actividades</span></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="activities-page">
+    <section class="activities-hero">
+      <div class="container">
+        <h1>Actividades</h1>
+      </div>
+    </section>
+
+    <section class="container">
+      <div class="media-grid">
+        <article class="media-card">
+          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
+          </svg>
+          <span>Contenido próximamente</span>
+        </article>
+        <article class="media-card">
+          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
+          </svg>
+          <span>Contenido próximamente</span>
+        </article>
+        <article class="media-card">
+          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
+          </svg>
+          <span>Contenido próximamente</span>
+        </article>
+        <article class="media-card">
+          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
+          </svg>
+          <span>Contenido próximamente</span>
+        </article>
+        <article class="media-card">
+          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
+          </svg>
+          <span>Contenido próximamente</span>
+        </article>
+        <article class="media-card">
+          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
+          </svg>
+          <span>Contenido próximamente</span>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Control del menú responsive compartido.
+    const nav = document.querySelector('.site-nav');
+    const toggle = document.querySelector('.nav-toggle');
+    toggle.addEventListener('click', () => {
+      const isOpen = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    // TODO: insertar aquí las rutas de imágenes cuando estén disponibles.
+    // const imagePaths = ["data/IMAGEN_1.jpg", "data/IMAGEN_2.jpg"];
+
+    // TODO: insertar aquí las rutas de videos cuando estén disponibles.
+    // const videoPaths = ["data/VIDEO_1.mp4", "data/VIDEO_2.mp4"];
+  </script>
+</body>
+</html>
