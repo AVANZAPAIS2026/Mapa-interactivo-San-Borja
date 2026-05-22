@@ -11,27 +11,37 @@ Uso:
     python convert.py
 """
 
-import geopandas as gpd
+try:
+    import geopandas as gpd
+except ImportError:
+    print("❌ Error: Geopandas no está instalado.")
+    print("   Ejecuta: pip install geopandas pyogrio")
+    exit(1)
 import os
 
 # Habilita restauración automática de .shx cuando falta el archivo índice
 os.environ.setdefault("SHAPE_RESTORE_SHX", "YES")
 
 # ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
-SHAPEFILE_PATH = "Data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.shp"       # Ruta a tu shapefile
-OUTPUT_PATH    = "Data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson"   # Archivo de salida
+SHAPEFILE_PATH = "data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.shp"       # Ruta a tu shapefile
+OUTPUT_PATH    = "data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson"   # Archivo de salida
 SIMPLIFY       = True                   # True recomendado para +1000 lotes
 SIMPLIFY_TOL   = 0.00005                # Tolerancia de simplificación (grados)
                                         # Reducir si los lotes son muy pequeños
 # ──────────────────────────────────────────────────────────────────────────────
 
 def convertir():
+    # Asegurar que trabajamos en el directorio del script
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
     if not os.path.exists(SHAPEFILE_PATH):
         print(f"❌ No se encontró el shapefile en: {SHAPEFILE_PATH}")
-        print("   Asegúrate de que la carpeta 'data/' contiene .shp .dbf .prj .shx")
+        print(f"   Directorio actual: {os.getcwd()}")
+        print(f"   Buscando en: {os.path.abspath(SHAPEFILE_PATH)}")
+        print(f"   Asegúrate de que los archivos .shp, .dbf, .prj y .shx estén dentro de la carpeta 'data/'")
         return
 
-    print(f"📂 Cargando shapefile: {SHAPEFILE_PATH}")
+    print(f"📂 Leyendo: {SHAPEFILE_PATH}...")
     gdf = gpd.read_file(SHAPEFILE_PATH)
 
     print(f"   → {len(gdf)} lotes encontrados")
@@ -59,10 +69,10 @@ def convertir():
     gdf.to_file(OUTPUT_PATH, driver="GeoJSON")
 
     size_kb = os.path.getsize(OUTPUT_PATH) / 1024
-    print(f"\n✅ GeoJSON generado: {OUTPUT_PATH}")
+    print(f"\n✅ ¡Éxito! Archivo generado en: {OUTPUT_PATH}")
     print(f"   Tamaño: {size_kb:.1f} KB")
-    if size_kb > 5000:
-        print("⚠️  Archivo grande (+5 MB). Considera aumentar SIMPLIFY_TOL.")
+    if size_kb > 10000:
+        print("⚠️  Archivo muy pesado. Si el mapa va lento, aumenta SIMPLIFY_TOL en el script.")
 
 if __name__ == "__main__":
     convertir()

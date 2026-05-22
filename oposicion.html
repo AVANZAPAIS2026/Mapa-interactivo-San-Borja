@@ -38,10 +38,6 @@
       </div>
       <div id="hdr-count">Sin datos</div>
     </div>
-    <div class="header-legend">
-      <div class="blk-title">Sectores</div>
-      <div class="leg-grid" id="leg-grid"></div>
-    </div>
   </header>
 
   <div id="map"></div>
@@ -67,10 +63,26 @@
       responsable: 'responsable',
       participantes: 'participantes',
       actividad: 'actividad',
+      agrupacion: 'agrupacion_politica',
     };
 
-    const LOT_FILL = '#DB1774';
-    const LOT_STROKE = '#303E7F';
+    const GEOJSON_LAYER_COLOR = '#303E7F';
+    const GROUP_COLOR_OVERRIDES = {
+      'renovacion popular': '#33CCFF',
+    };
+    const GROUP_COLOR_PALETTE = [
+      '#DB1774',
+      '#F59E0B',
+      '#22C55E',
+      '#8B5CF6',
+      '#EF4444',
+      '#14B8A6',
+      '#F97316',
+      '#6366F1',
+      '#84CC16',
+      '#EC4899',
+      '#06B6D4',
+    ];
     const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1187458462&single=true&output=tsv';
     const GEOJSON_PATHS = [
       'data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson',
@@ -79,8 +91,8 @@
     let map, lotesLayer, puntosLayer;
     let lotesGeoJSON = null;
     let rows = [];
-    let sectorCounts = {};
-    window._detectedSectorCol = null;
+    let groupColors = {};
+    window._detectedGroupCol = null;
 
     function initMap() {
       map = L.map('map', { zoomControl: true, preferCanvas: true })
@@ -99,7 +111,7 @@
         const loaded = await fetchFirstGeoJSON(GEOJSON_PATHS);
         lotesGeoJSON = loaded.data;
         lotesLayer = L.geoJSON(lotesGeoJSON, {
-          style: defaultStyle,
+          style: geojsonLayerStyle,
           onEachFeature: bindLoteEvents,
         }).addTo(map);
 
@@ -144,36 +156,37 @@
       throw new Error(`GeoJSON no encontrado. Revisé: ${errors.join(' | ')}`);
     }
 
-    function defaultStyle() {
+    function geojsonLayerStyle() {
       return {
-        color: LOT_STROKE,
+        color: GEOJSON_LAYER_COLOR,
         weight: .8,
-        fillColor: LOT_FILL,
+        fillColor: GEOJSON_LAYER_COLOR,
         fillOpacity: .6,
       };
     }
 
-    function dataStyle() {
+    function groupedLotStyle(feature) {
       return {
-        color: LOT_STROKE,
-        weight: .7,
-        fillColor: LOT_FILL,
-        fillOpacity: .62,
+        color: GEOJSON_LAYER_COLOR,
+        weight: .8,
+        fillColor: feature?.properties?._group_color || GEOJSON_LAYER_COLOR,
+        fillOpacity: .6,
       };
     }
 
     function bindLoteEvents(feature, layer) {
       layer.on({
         mouseover(e) {
-          const s = feature.properties._sector;
-          e.target.setStyle({ weight: 2, color: LOT_STROKE, fillColor: LOT_FILL, fillOpacity: .92 });
-          const tip = s
-            ? `<b>Sector ${s}</b> · Lote #${feature.properties._lote_idx ?? '-'}<br>${feature.properties._puntos?.length ?? 0} registro(s)`
+          const group = feature.properties._agrupacion;
+          const fillColor = feature.properties._group_color || GEOJSON_LAYER_COLOR;
+          e.target.setStyle({ weight: 2, color: GEOJSON_LAYER_COLOR, fillColor, fillOpacity: .92 });
+          const tip = group
+            ? `<b>${group}</b> · Lote #${feature.properties._lote_idx ?? '-'}<br>${feature.properties._puntos?.length ?? 0} registro(s)`
             : `Lote #${feature.properties._lote_idx ?? '-'} · Sin datos`;
           e.target.bindTooltip(tip, { className: 'lt-tip', sticky: true }).openTooltip();
         },
         mouseout(e) {
-          e.target.setStyle(e.target.feature.properties._sector ? dataStyle() : defaultStyle());
+          e.target.setStyle(e.target.feature.properties._agrupacion ? groupedLotStyle(e.target.feature) : geojsonLayerStyle());
           e.target.closeTooltip();
         },
         click(e) {
@@ -187,7 +200,7 @@
     }
 
     function openSinglePopup(latlng, row, feature) {
-      const s = feature.properties._sector || '-';
+      const group = feature.properties._agrupacion || row[COL.agrupacion] || '-';
       const lat = parseFloat(row[COL.latitud]).toFixed(5);
       const lon = parseFloat(row[COL.longitud]).toFixed(5);
 
@@ -196,9 +209,9 @@
         .setContent(`
           <div>
             <div class="popup-header">
-              <div class="popup-sector-badge">S${s}</div>
+              <div class="popup-sector-badge" style="background:${feature.properties._group_color || GEOJSON_LAYER_COLOR}"></div>
               <div class="popup-header-info">
-                <div class="ph-label">Sector ${s} · Lote #${feature.properties._lote_idx ?? '-'}</div>
+                <div class="ph-label">${group} · Lote #${feature.properties._lote_idx ?? '-'}</div>
                 <div class="ph-title">${row[COL.actividad] || 'Sin actividad'}</div>
               </div>
             </div>
@@ -229,11 +242,11 @@
     }
 
     function openMultiPopup(latlng, pts, feature) {
-      const s = feature.properties._sector || '-';
+      const group = feature.properties._agrupacion || '-';
       const cards = pts.map((row, i) => `
         <div class="pm-card" data-index="${i}">
           <div class="pm-act">${row[COL.actividad] || '-'}</div>
-          <div class="pm-sub">${row[COL.fecha] || ''} · ${row[COL.responsable] || ''}</div>
+          <div class="pm-sub">${row[COL.agrupacion] || group} · ${row[COL.fecha] || ''}</div>
         </div>`).join('');
 
       window._multiCtx = { pts, feature };
@@ -243,9 +256,9 @@
         .setContent(`
           <div>
             <div class="popup-header">
-              <div class="popup-sector-badge">S${s}</div>
+              <div class="popup-sector-badge" style="background:${feature.properties._group_color || GEOJSON_LAYER_COLOR}"></div>
               <div class="popup-header-info">
-                <div class="ph-label">Sector ${s} · Lote #${feature.properties._lote_idx ?? '-'}</div>
+                <div class="ph-label">${group} · Lote #${feature.properties._lote_idx ?? '-'}</div>
                 <div class="ph-title">${pts.length} registros en este lote</div>
               </div>
             </div>
@@ -313,19 +326,13 @@
       });
 
       const cols = Object.keys(rows[0] || {});
-      let autoCol = cols.find(c => c.toLowerCase().includes('sector')) || null;
+      let autoCol = cols.find(c => c.toLowerCase().includes('agrupacion') && c.toLowerCase().includes('politica')) || null;
       if (!autoCol) {
-        for (const c of cols) {
-          const values = rows.map(r => parseInt(r[c], 10)).filter(v => !isNaN(v) && v >= 1 && v <= 12);
-          if (values.length > rows.length * .5) {
-            autoCol = c;
-            break;
-          }
-        }
+        autoCol = cols.find(c => c.toLowerCase().includes('agrupacion')) || null;
       }
 
       if (autoCol) {
-        window._detectedSectorCol = autoCol;
+        window._detectedGroupCol = autoCol;
         applyToMap();
       }
     }
@@ -333,25 +340,31 @@
     function applyToMap() {
       if (!lotesGeoJSON || !rows.length) return;
 
-      const colSector = window._detectedSectorCol || 'sector';
+      const colGroup = window._detectedGroupCol || COL.agrupacion;
       if (puntosLayer) {
         map.removeLayer(puntosLayer);
         puntosLayer = null;
       }
 
       lotesGeoJSON.features.forEach(f => {
-        delete f.properties._sector;
+        delete f.properties._agrupacion;
+        delete f.properties._group_color;
         delete f.properties._puntos;
       });
-      sectorCounts = {};
+      groupColors = {};
 
-      const valid = rows.filter(r => !isNaN(parseFloat(r[COL.latitud])) && !isNaN(parseFloat(r[COL.longitud])));
+      const valid = rows.filter(r =>
+        !isNaN(parseFloat(r[COL.latitud])) &&
+        !isNaN(parseFloat(r[COL.longitud])) &&
+        String(r[colGroup] || '').trim()
+      );
 
       valid.forEach(row => {
         const lat = parseFloat(row[COL.latitud]);
         const lon = parseFloat(row[COL.longitud]);
-        const sector = parseInt(row[colSector], 10);
-        if (isNaN(sector) || sector < 1 || sector > 12) return;
+        const group = String(row[colGroup] || '').trim();
+        if (!group) return;
+        const color = getGroupColor(group);
 
         const pt = turf.point([lon, lat]);
         for (const feat of lotesGeoJSON.features) {
@@ -359,10 +372,10 @@
             if (turf.booleanPointInPolygon(pt, feat)) {
               if (!feat.properties._puntos) {
                 feat.properties._puntos = [];
-                feat.properties._sector = sector;
+                feat.properties._agrupacion = group;
+                feat.properties._group_color = color;
               }
               feat.properties._puntos.push(row);
-              sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
               break;
             }
           } catch (_) {}
@@ -370,21 +383,22 @@
       });
 
       lotesLayer.eachLayer(layer => {
-        layer.setStyle(layer.feature.properties._sector ? dataStyle() : defaultStyle());
+        layer.setStyle(layer.feature.properties._agrupacion ? groupedLotStyle(layer.feature) : geojsonLayerStyle());
       });
 
       const markers = valid.map(row => {
         const lat = parseFloat(row[COL.latitud]);
         const lon = parseFloat(row[COL.longitud]);
-        const sector = parseInt(row[colSector], 10);
+        const group = String(row[colGroup] || '').trim();
+        const color = group ? getGroupColor(group) : GEOJSON_LAYER_COLOR;
         const icon = L.divIcon({
           className: '',
-          html: `<div style="width:9px;height:9px;border-radius:50%;background:${LOT_FILL};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
+          html: `<div style="width:9px;height:9px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
           iconSize: [9, 9],
           iconAnchor: [4, 4],
         });
         const m = L.marker([lat, lon], { icon });
-        m.bindTooltip(`<b>Sector ${sector}</b> · ${row[COL.actividad] || '-'}`, { className: 'lt-tip', sticky: true });
+        m.bindTooltip(`<b>${group || 'Sin agrupación'}</b> · ${row[COL.actividad] || '-'}`, { className: 'lt-tip', sticky: true });
         m.on('click', () => {
           const feat = lotesGeoJSON.features.find(f => f.properties._puntos?.includes(row));
           if (feat) openSinglePopup([lat, lon], row, feat);
@@ -393,32 +407,30 @@
       });
 
       puntosLayer = L.layerGroup(markers).addTo(map);
-      renderLegend();
 
-      const lotes = lotesGeoJSON.features.filter(f => f.properties._sector).length;
+      const lotes = lotesGeoJSON.features.filter(f => f.properties._agrupacion).length;
       document.getElementById('hdr-count').textContent =
         `${lotesGeoJSON.features.length.toLocaleString()} lotes · ${valid.length} puntos · ${lotes} coloreados`;
     }
 
-    function renderLegend() {
-      const grid = document.getElementById('leg-grid');
-      grid.innerHTML = '';
-      for (let s = 1; s <= 12; s++) {
-        const n = sectorCounts[s] || 0;
-        const div = document.createElement('div');
-        div.className = 'leg-item' + (n ? ' active' : '');
-        div.innerHTML = `
-          <div class="leg-dot"></div>
-          <div>
-            <div class="leg-name">Sector ${s}</div>
-            <div class="leg-count">${n ? `${n} punto${n !== 1 ? 's' : ''}` : '-'}</div>
-          </div>`;
-        grid.appendChild(div);
+    function normalizeGroupName(value) {
+      return String(value || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ').trim();
+    }
+
+    function getGroupColor(group) {
+      const key = normalizeGroupName(group);
+      if (!key) return GEOJSON_LAYER_COLOR;
+      if (GROUP_COLOR_OVERRIDES[key]) return GROUP_COLOR_OVERRIDES[key];
+      if (!groupColors[key]) {
+        const used = Object.keys(groupColors).length;
+        groupColors[key] = GROUP_COLOR_PALETTE[used % GROUP_COLOR_PALETTE.length];
       }
+      return groupColors[key];
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      renderLegend();
       initMap();
     });
   </script>
