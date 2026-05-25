@@ -6,8 +6,56 @@
   <title>Roberth Montoya | Sectores y Sub-sectores</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <link rel="stylesheet" href="css/styles.css?v=20260522-landing"/>
+  <style>
+    .search-panel {
+      position: absolute;
+      top: 110px;
+      left: 20px;
+      z-index: 1000;
+      width: 320px;
+      background: white;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .search-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .search-box button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0 15px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #search-result {
+      display: none;
+      border-top: 1px solid #eee;
+      padding-top: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+    .result-badge {
+      background: var(--surface-soft);
+      padding: 10px;
+      border-radius: 8px;
+      border-left: 4px solid var(--accent);
+    }
+    .result-label { font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold; }
+    .result-value { font-size: 18px; color: var(--primary); font-weight: 900; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
-<body class="map-page placeholder-map">
+<body class="map-page">
   <nav class="site-nav" aria-label="Navegación principal">
     <div class="nav-inner">
       <a class="brand" href="index.html" aria-label="Ir al inicio">
@@ -21,26 +69,47 @@
         <li><a class="nav-link" href="index.html">Inicio</a></li>
         <li><a class="nav-link" href="avance-campana.html">Avance Campaña</a></li>
         <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Zonificación</span></li>
-        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled active" aria-current="page">Sectores y Sub-sectores</span></li>
+        <li><a class="nav-link active" href="sectores.html" aria-current="page">Sectores y Sub-sectores</a></li>
         <li><a class="nav-link" href="oposicion.html">Oposición</a></li>
         <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Actividades</span></li>
       </ul>
     </div>
   </nav>
 
-  <div id="map"></div>
-  <div class="map-overlay">
-    <svg class="lock-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 10V8a5 5 0 0 1 10 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-      <path d="M12 14v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-    </svg>
-    <span>Capa en preparación — Disponible próximamente</span>
+  <div id="loader"><div><div class="spin"></div><div class="spin-txt">Cargando información territorial...</div></div></div>
+
+  <header class="map-header">
+    <div class="map-header-top">
+      <div class="map-title">
+        <h1>Sectores y Sub-sectores</h1>
+        <div class="district">Análisis Territorial Unificado</div>
+      </div>
+      <div id="hdr-count">Cargando datos...</div>
+    </div>
+  </header>
+
+  <div class="search-panel">
+    <div class="search-box">
+      <input type="text" id="addr-input" placeholder="Ingresa tu dirección (ej: Av. San Borja Norte 123)">
+      <button onclick="buscarDireccion()">🔍</button>
+    </div>
+    <div id="search-result">
+      <div class="result-badge">
+        <div class="result-label">Ubicación encontrada</div>
+        <div style="margin-bottom: 8px;"><strong id="res-addr" style="font-size: 13px;">-</strong></div>
+        <div style="display: flex; gap: 20px;">
+          <div><div class="result-label">Sector</div><div class="result-value" id="res-sector">-</div></div>
+          <div><div class="result-label">Sub-Sector</div><div class="result-value" id="res-sub">-</div></div>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <div id="map"></div>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
   <script>
-    // Control del menú responsive compartido.
     const nav = document.querySelector('.site-nav');
     const toggle = document.querySelector('.nav-toggle');
     toggle.addEventListener('click', () => {
@@ -48,14 +117,201 @@
       toggle.setAttribute('aria-expanded', String(isOpen));
     });
 
-    const map = L.map('map', { zoomControl: true }).setView([-12.1058, -76.9986], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 19,
+    // Función de formateo en el ámbito global para que sea accesible por styleFeature
+    function formatSectorName(name) {
+      let n = String(name || 'S/N').toUpperCase();
+      // Corrección específica para el subsector 1A
+      if (n === 'SUB-SECT1' || n === 'SUB_SECT1') return '1A';
+      return n.replace(/_/g, ' ').replace(/-/g, ' ');
+    }
+
+    // Nueva instrucción visual para el usuario
+    const searchHint = '<div style="font-size:10px; color:#e74c3c; margin-top:5px;">💡 Si la ubicación no es exacta, arrastra el marcador o haz clic en el mapa.</div>';
+
+    let unificadoData = null;
+    let searchMarker = null;
+    let geoLayer = null;
+
+    const map = L.map('map').setView([-12.106, -77.001], 14);
+    const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // TODO: reemplazar con la ruta real cuando el GeoJSON esté listo
-    // const geojsonPath = "data/NOMBRE_ARCHIVO.geojson";
+    function styleFeature(feature) {
+      if (!feature || !feature.properties) return { color: '#303E7F', weight: 1, fillOpacity: 0.4 };
+      
+      const source = formatSectorName(feature.properties.capa_origen);
+      
+      // Paleta optimizada de 40 colores de alto contraste (basada en Kelly's y paletas geoespaciales)
+      const palette = [
+        '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#42d4f4', '#f032e6', '#bfef45', '#fabed4',
+        '#469990', '#dcbeff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#a9a9a9',
+        '#FFD700', '#4B0082', '#40E0D0', '#EE82EE', '#87CEEB', '#006400', '#FF7F50', '#4682B4', '#DC143C', '#FF8C00',
+        '#4169E1', '#228B22', '#2E8B57', '#DA70D6', '#6A5ACD', '#FF6347', '#7FFF00', '#FF1493', '#1E90FF', '#00CED1'
+      ];
+      
+      // Algoritmo DJB2 para una distribución de colores más uniforme y con mejor contraste secuencial
+      let hash = 5381;
+      for (let i = 0; i < source.length; i++) {
+        hash = ((hash << 5) + hash) + source.charCodeAt(i);
+      }
+      
+      // Se utiliza un multiplicador primo para aleatorizar la selección y evitar 
+      // que sectores con nombres similares (10A, 10B) queden con colores parecidos
+      const index = Math.abs(hash * 37) % palette.length;
+      const color = palette[index];
+
+      return { 
+        fillColor: color, 
+        weight: 1, 
+        opacity: 1, 
+        color: 'white', 
+        fillOpacity: 0.5 
+      };
+    }
+
+    // Carga el archivo desde la subcarpeta data
+    fetch('data/mapa_unificado.geojson')
+      .then(response => {
+        if (!response.ok) throw new Error(`No se encontró mapa_unificado.geojson (Error ${response.status})`);
+        return response.json();
+      })
+      .then(data => {
+        if (!data.features || data.features.length === 0) {
+          throw new Error("El archivo GeoJSON no contiene elementos visibles.");
+        }
+
+        unificadoData = data;
+
+        geoLayer = L.geoJSON(data, {
+          style: styleFeature,
+          onEachFeature: function(feature, layer) {
+
+            // Efectos visuales al pasar el mouse
+            layer.on({
+              mouseover: (e) => {
+                const l = e.target;
+                l.setStyle({
+                  weight: 3,
+                  color: '#303E7F',
+                  fillOpacity: 0.8
+                });
+                l.bringToFront();
+                // Tooltip flotante con el ID del subsector
+                l.bindTooltip(`<div style="font-size:1.6em; font-weight:900; color:${l.options.fillColor}; text-shadow: 1px 1px 2px #000;">${formatSectorName(feature.properties.capa_origen)}</div>`, { 
+                    sticky: true, 
+                    direction: 'top',
+                    className: 'map-tooltip'
+                }).openTooltip();
+              },
+              mouseout: (e) => {
+                geoLayer.resetStyle(e.target);
+              }
+            });
+          }
+        }).addTo(map);
+
+        // Zoom automático a los datos
+        map.fitBounds(geoLayer.getBounds(), { padding: [20, 20] });
+
+        // Permitir clic en el mapa para ubicar manualmente
+        map.on('click', (e) => {
+            procesarPunto(e.latlng.lat, e.latlng.lng, "Punto seleccionado en mapa");
+        });
+
+        document.getElementById('hdr-count').textContent = `${data.features.length.toLocaleString()} elementos`;
+        document.getElementById('loader').classList.add('gone');
+      })
+      .catch(err => {
+        console.error("Error de carga:", err.message);
+        document.getElementById('hdr-count').textContent = "Error: Archivo no encontrado";
+        alert("No se pudo cargar el archivo de datos.");
+        document.getElementById('loader').classList.add('gone');
+      });
+
+    // Función unificada para procesar una coordenada y encontrar su sector
+    function procesarPunto(lat, lon, label) {
+        const point = [parseFloat(lat), parseFloat(lon)];
+
+        // Colocar o mover marcador
+        if (searchMarker) {
+            searchMarker.setLatLng(point);
+        } else {
+            searchMarker = L.marker(point, { 
+                draggable: true,
+                autoPan: true 
+            }).addTo(map);
+            
+            // Actualizar datos al terminar de arrastrar
+            searchMarker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                procesarPunto(pos.lat, pos.lng, "Ubicación ajustada manualmente");
+            });
+        }
+
+        // Identificar Sector/Sub-sector usando Turf
+        const pt = turf.point([parseFloat(lon), parseFloat(lat)]);
+        let foundFeature = null;
+
+        if (unificadoData) {
+            unificadoData.features.forEach(f => {
+                if (turf.booleanPointInPolygon(pt, f)) {
+                    foundFeature = f;
+                }
+            });
+        }
+
+        const resultDiv = document.getElementById('search-result');
+        resultDiv.style.display = 'block';
+        document.getElementById('res-addr').innerHTML = label + searchHint;
+
+        if (foundFeature) {
+            const subID = formatSectorName(foundFeature.properties.capa_origen);
+            const sectorMatch = subID.match(/\d+/);
+            const sectorNum = sectorMatch ? sectorMatch[0] : "-";
+            document.getElementById('res-sector').textContent = sectorNum;
+            document.getElementById('res-sub').textContent = subID;
+        } else {
+            document.getElementById('res-sector').textContent = "Fuera de zona";
+            document.getElementById('res-sub').textContent = "-";
+        }
+    }
+
+    async function buscarDireccion() {
+      const input = document.getElementById('addr-input').value;
+      if (!input) return;
+
+      const btn = document.querySelector('.search-box button');
+      btn.textContent = "...";
+
+      try {
+        // Motor de búsqueda de Esri (ArcGIS) - Mucho más preciso para numeración en Lima
+        const query = `${input}, San Borja, Lima, Peru`;
+        const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(query)}&maxLocations=1&outFields=Match_addr,Addr_type`;
+        
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (!data.candidates || data.candidates.length === 0) {
+          alert("No se encontró la dirección. Intenta ser más específico.");
+          return;
+        }
+
+        const candidate = data.candidates[0];
+        const { x, y } = candidate.location;
+        
+        // 1. Ubicar en el mapa basándose en la coordenada exacta
+        map.setView([y, x], 19);
+        
+        // 2. Procesar el punto para identificar el Sector y Sub-sector
+        procesarPunto(y, x, candidate.address);
+
+      } catch (err) {
+        console.error(err);
+      } finally {
+        btn.textContent = "🔍";
+      }
+    }
   </script>
 </body>
 </html>

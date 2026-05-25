@@ -20,7 +20,7 @@
         <li><a class="nav-link active" href="index.html" aria-current="page">Inicio</a></li>
         <li><a class="nav-link" href="avance-campana.html">Avance Campaña</a></li>
         <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Zonificación</span></li>
-        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Sectores y Sub-sectores</span></li>
+        <li><a class="nav-link" href="sectores.html">Sectores y Sub-sectores</a></li>
         <li><a class="nav-link" href="oposicion.html">Oposición</a></li>
         <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Actividades</span></li>
       </ul>
@@ -179,10 +179,58 @@
 
     const joinForm = document.getElementById('join-form');
     const joinFormNote = document.getElementById('join-form-note');
-    joinForm.addEventListener('submit', (event) => {
+
+    // Configuración de Google Form
+    const FORM_ACTION_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSedIBfYtUVjzGN04qxOvMz1luonE3v8vYpZ3eAKJ2momjqbLw/formResponse';
+
+    // IMPORTANTE: Reemplaza estos IDs con los que obtengas al inspeccionar tu formulario
+    const ENTRY_IDS = {
+      nombre: 'entry.2005620554', // Ejemplo, verifica el real
+      celular: 'entry.1166974658',
+      correo: 'entry.1045781291',
+      zona: 'entry.1065046570',
+      disponibilidad: 'entry.1102238934',
+      mensaje: 'entry.1846923513'
+    };
+
+    joinForm.addEventListener('submit', async (event) => {
       event.preventDefault();
-      joinForm.reset();
-      joinFormNote.textContent = 'Gracias por sumarte. Conectaremos este formulario a la base de datos de campaña.';
+      
+      const submitBtn = joinForm.querySelector('.form-submit');
+      const originalText = submitBtn.textContent;
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando...';
+        joinFormNote.textContent = 'Registrando tu información...';
+
+        const rawData = new FormData(joinForm);
+        
+        // Preparamos los datos en el formato que Google Form entiende
+        const googleFormData = new URLSearchParams();
+        googleFormData.append(ENTRY_IDS.nombre, rawData.get('nombre'));
+        googleFormData.append(ENTRY_IDS.celular, rawData.get('celular'));
+        googleFormData.append(ENTRY_IDS.correo, rawData.get('correo'));
+        googleFormData.append(ENTRY_IDS.zona, rawData.get('zona'));
+        googleFormData.append(ENTRY_IDS.disponibilidad, rawData.get('disponibilidad'));
+        googleFormData.append(ENTRY_IDS.mensaje, rawData.get('mensaje'));
+
+        // Enviamos usando no-cors para evitar bloqueos del navegador
+        await fetch(FORM_ACTION_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: googleFormData,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+
+        joinForm.reset();
+        joinFormNote.textContent = '¡Gracias por sumarte! Tu información ha sido enviada con éxito.';
+      } catch (error) {
+        joinFormNote.textContent = 'Hubo un problema al conectar con el formulario. Intenta de nuevo.';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     });
   </script>
 </body>
