@@ -69,6 +69,10 @@
       actividad: 'actividad',
     };
 
+    const LAT_KEYS = ['latitud', 'latitude', 'lat'];
+    const LON_KEYS = ['longitud', 'longitude', 'lng', 'lon', 'long'];
+    const GEOPOINT_KEYS = ['geopoint', 'geo_point', 'geo_point_2d', 'coordenadas', 'coordenada', 'ubicacion', 'ubicacion_gps', 'punto_gps'];
+
     const GEOJSON_LAYER_COLOR = '#303E7F';
     const PAINTED_LOT_COLOR = '#DB1774';
     const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1195442176&single=true&output=csv';
@@ -189,8 +193,9 @@
 
     function openSinglePopup(latlng, row, feature) {
       const s = feature.properties._sector || '-';
-      const lat = parseFloat(row[COL.latitud]).toFixed(5);
-      const lon = parseFloat(row[COL.longitud]).toFixed(5);
+      const coords = getRowLatLon(row);
+      const lat = coords ? coords.lat.toFixed(5) : '-';
+      const lon = coords ? coords.lon.toFixed(5) : '-';
 
       L.popup({ maxWidth: 300, minWidth: 280 })
         .setLatLng(latlng)
@@ -273,7 +278,8 @@
     window.openCardFromMap = (i) => {
       const { pts, feature } = window._multiCtx;
       const row = pts[i];
-      const latlng = [parseFloat(row[COL.latitud]), parseFloat(row[COL.longitud])];
+      const coords = getRowLatLon(row);
+      const latlng = coords ? [coords.lat, coords.lon] : map.getCenter();
       openSinglePopup(latlng, row, feature);
     };
 
@@ -303,7 +309,85 @@
     function norm(k) {
       return k.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '_').trim();
+        .replace(/[^\w]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .trim();
+    }
+
+    function parseNumber(value) {
+      if (value === null || value === undefined) return NaN;
+      if (typeof value === 'number') return value;
+      const cleaned = String(value)
+        .trim()
+        .replace(',', '.')
+        .match(/-?\d+(?:\.\d+)?/);
+      return cleaned ? parseFloat(cleaned[0]) : NaN;
+    }
+
+    function findValue(row, keys) {
+      for (const key of keys) {
+        if (row[key] !== undefined && row[key] !== '') return row[key];
+      }
+      return undefined;
+    }
+
+    function parseGeoPoint(value) {
+      if (value === null || value === undefined || value === '') return null;
+
+      if (typeof value === 'object') {
+        const lat = parseNumber(value.latitude ?? value.lat ?? value._lat);
+        const lon = parseNumber(value.longitude ?? value.lng ?? value.lon ?? value.long ?? value._long);
+        return makeLatLon(lat, lon);
+      }
+
+      const text = String(value).trim();
+      const namedLat = text.match(/(?:latitud|latitude|lat)\s*[:=]\s*(-?\d+(?:[.,]\d+)?)/i);
+      const namedLon = text.match(/(?:longitud|longitude|lng|lon|long)\s*[:=]\s*(-?\d+(?:[.,]\d+)?)/i);
+      if (namedLat && namedLon) {
+        const lat = parseNumber(namedLat[1]);
+        const lon = parseNumber(namedLon[1]);
+        return makeLatLon(lat, lon);
+      }
+
+      const nums = text.match(/-?\d+(?:[.,]\d+)?/g);
+      if (!nums || nums.length < 2) return null;
+
+      const first = parseNumber(nums[0]);
+      const second = parseNumber(nums[1]);
+      return makeLatLon(first, second);
+    }
+
+    function makeLatLon(first, second) {
+      if (isValidLatLon(first, second)) {
+        if (Math.abs(first) > 60 && Math.abs(second) < 30) return { lat: second, lon: first };
+        return { lat: first, lon: second };
+      }
+      if (isValidLatLon(second, first)) return { lat: second, lon: first };
+      return null;
+    }
+
+    function isValidLatLon(lat, lon) {
+      return Number.isFinite(lat) && Number.isFinite(lon)
+        && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+    }
+
+    function getRowLatLon(row) {
+      const lat = parseNumber(findValue(row, LAT_KEYS));
+      const lon = parseNumber(findValue(row, LON_KEYS));
+      const directCoords = makeLatLon(lat, lon);
+      if (directCoords) return directCoords;
+
+      for (const key of GEOPOINT_KEYS) {
+        const coords = parseGeoPoint(row[key]);
+        if (coords) return coords;
+      }
+
+      for (const value of Object.values(row)) {
+        const coords = parseGeoPoint(value);
+        if (coords) return coords;
+      }
+
+      return null;
     }
 
     function ingestRows(data, sourceName) {
@@ -346,11 +430,17 @@
       });
       sectorCounts = {};
 
-      const valid = rows.filter(r => !isNaN(parseFloat(r[COL.latitud])) && !isNaN(parseFloat(r[COL.longitud])));
+      const valid = rows
+        .map(row => ({ row, coords: getRowLatLon(row) }))
+        .filter(item => item.coords);
 
-      valid.forEach(row => {
-        const lat = parseFloat(row[COL.latitud]);
-        const lon = parseFloat(row[COL.longitud]);
+      const invalidCoords = rows.length - valid.length;
+      if (invalidCoords > 0) {
+        console.warn(`${invalidCoords} fila(s) sin coordenadas válidas. Revisa columnas latitud/longitud o geopoint.`);
+      }
+
+      valid.forEach(({ row, coords }) => {
+        const { lat, lon } = coords;
         const sector = parseInt(row[colSector], 10);
         if (isNaN(sector) || sector < 1 || sector > 12) return;
 
@@ -374,9 +464,8 @@
         layer.setStyle(layer.feature.properties._sector ? paintedLotStyle() : geojsonLayerStyle());
       });
 
-      const markers = valid.map(row => {
-        const lat = parseFloat(row[COL.latitud]);
-        const lon = parseFloat(row[COL.longitud]);
+      const markers = valid.map(({ row, coords }) => {
+        const { lat, lon } = coords;
         const sector = parseInt(row[colSector], 10);
         const icon = L.divIcon({
           className: '',
