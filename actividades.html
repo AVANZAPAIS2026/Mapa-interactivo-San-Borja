@@ -5,8 +5,710 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Roberth Montoya | Actividades</title>
   <link rel="stylesheet" href="css/styles.css?v=20260522-landing"/>
+  <style>
+    body {
+      background: #ffffff;
+    }
+
+    .activities-page {
+      padding-top: 64px;
+      overflow: hidden;
+    }
+
+    .activities-body .site-nav {
+      background: rgba(255, 255, 255, .96);
+      color: var(--primary);
+      border-bottom: 1px solid rgba(217, 222, 234, .82);
+      box-shadow: none;
+      backdrop-filter: blur(14px);
+    }
+
+    .activities-body .brand {
+      color: var(--primary-deep);
+      font-weight: 800;
+    }
+
+    .activities-body .brand-mark {
+      background: #fff1f7;
+      color: var(--accent);
+    }
+
+    .activities-body .nav-link {
+      position: relative;
+      border-radius: 0;
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 800;
+      background: transparent;
+    }
+
+    .activities-body .nav-link:hover,
+    .activities-body .nav-link.active {
+      background: transparent;
+      color: var(--accent);
+    }
+
+    .activities-body .nav-link.active::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 5px;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .activities-body .nav-link.disabled {
+      color: var(--muted);
+      opacity: .5;
+    }
+
+    .activities-body .nav-toggle {
+      border-color: #d9deea;
+      color: var(--primary);
+    }
+
+    .activities-hero {
+      position: relative;
+      min-height: 330px;
+      display: grid;
+      align-items: end;
+      color: #fff;
+      background:
+        linear-gradient(105deg, rgba(25, 36, 91, .98) 0%, rgba(48, 62, 127, .9) 62%, rgba(219, 23, 116, .62) 100%),
+        #303E7F;
+    }
+
+    .activities-hero::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--campaign-cyan), var(--accent));
+    }
+
+    .activities-hero .container {
+      position: relative;
+      z-index: 1;
+      padding-top: 72px;
+      padding-bottom: 46px;
+    }
+
+    .activities-hero h1 {
+      margin: 0;
+      max-width: 680px;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.02;
+      letter-spacing: 0;
+      text-transform: none;
+      text-shadow: none;
+    }
+
+    .activities-hero p {
+      max-width: 540px;
+      margin: 14px 0 0;
+      font-size: 16px;
+      line-height: 1.5;
+      font-weight: 500;
+      color: rgba(255, 255, 255, .78);
+      text-shadow: none;
+    }
+
+    .activities-hero .eyebrow {
+      margin-bottom: 14px;
+      color: rgba(255, 255, 255, .86);
+    }
+
+    .activities-toolbar {
+      position: sticky;
+      top: 64px;
+      z-index: 20;
+      border-bottom: 1px solid #e7eaf1;
+      background: rgba(255, 255, 255, .94);
+      backdrop-filter: blur(12px);
+    }
+
+    .activities-toolbar .container {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .toolbar-title {
+      color: var(--primary);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .filter-tabs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .filter-tab {
+      min-height: 36px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: var(--muted);
+      font: 800 13px/1 var(--sans);
+      cursor: pointer;
+      transition: background .18s ease, color .18s ease, transform .18s ease;
+    }
+
+    .filter-tab:hover {
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .filter-tab.active {
+      background: transparent;
+      color: var(--primary);
+      box-shadow: inset 0 -2px 0 var(--primary);
+    }
+
+    .activities-section {
+      position: relative;
+      padding: 50px 0 74px;
+      background: #fff;
+    }
+
+    .activity-grid {
+      position: relative;
+      display: grid;
+      gap: 0;
+      padding-left: 0;
+    }
+
+    .activity-grid::before {
+      content: none;
+    }
+
+    .activity-card {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(280px, .92fr) minmax(0, 1.08fr);
+      gap: clamp(24px, 4vw, 54px);
+      min-height: 330px;
+      width: 100%;
+      padding: clamp(30px, 5vw, 58px) 0;
+      overflow: visible;
+      border: 0;
+      border-top: 1px solid #e7eaf1;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      transition: none;
+    }
+
+    .activity-card::before {
+      content: none;
+    }
+
+    .activity-card.featured {
+      grid-template-columns: minmax(0, 1.14fr) minmax(360px, .86fr);
+      min-height: 390px;
+      width: 100%;
+    }
+
+    .activity-card:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .activity-card:nth-child(even) {
+      grid-template-columns: minmax(0, 1.08fr) minmax(280px, .92fr);
+    }
+
+    .activity-card:nth-child(even) .activity-media {
+      order: 2;
+    }
+
+    .activity-card:hover {
+      transform: none;
+      border-color: #e7eaf1;
+      box-shadow: none;
+    }
+
+    .activity-media {
+      position: relative;
+      min-height: 100%;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #19245b;
+    }
+
+    .activity-card:not(.featured) .activity-media {
+      min-height: 330px;
+    }
+
+    .activity-media img {
+      width: 100%;
+      height: 100%;
+      min-height: 340px;
+      object-fit: cover;
+      display: block;
+      filter: saturate(.95) contrast(1.01);
+      transform: scale(1.01);
+      transition: transform .45s ease, filter .45s ease;
+    }
+
+    .activity-card.featured .activity-media img {
+      min-height: 430px;
+    }
+
+    .activity-card:hover .activity-media img {
+      transform: scale(1.04);
+      filter: saturate(1) contrast(1.02);
+    }
+
+    .activity-media::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(0deg, rgba(15, 20, 44, .42), rgba(15, 20, 44, 0) 58%);
+      pointer-events: none;
+    }
+
+    .media-badge {
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .92);
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .media-badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(219, 23, 116, .16);
+    }
+
+    .media-stack {
+      display: none;
+    }
+
+    .media-chip {
+      height: 54px;
+      border: 1px solid rgba(255, 255, 255, .36);
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .16);
+      backdrop-filter: blur(10px);
+    }
+
+    .media-chip img {
+      min-height: 54px;
+      opacity: .9;
+    }
+
+    .activity-content {
+      display: flex;
+      flex-direction: column;
+      padding: clamp(6px, 1vw, 14px) 0;
+    }
+
+    .activity-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #f5f7fb;
+      color: var(--primary);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .pill.accent {
+      background: #fff1f7;
+      color: var(--accent);
+    }
+
+    .activity-content h2 {
+      margin: 0;
+      color: var(--primary-deep);
+      font-size: clamp(24px, 3vw, 36px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .activity-card:not(.featured) .activity-content h2 {
+      font-size: 25px;
+    }
+
+    .activity-summary {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.56;
+    }
+
+    .activity-location {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      margin: 18px 0 0;
+      padding: 12px 0 0;
+      border: 0;
+      border-top: 1px solid #e7eaf1;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .location-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 900;
+    }
+
+    .location-text span {
+      display: block;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .location-text strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .ideas-list {
+      display: grid;
+      gap: 8px;
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .ideas-list li {
+      position: relative;
+      padding-left: 18px;
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .ideas-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .55em;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .activity-actions {
+      margin-top: auto;
+      padding-top: 22px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .activity-btn {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .18s ease, background .18s ease;
+    }
+
+    .activity-btn:hover {
+      transform: translateY(-1px);
+      background: var(--accent);
+    }
+
+    .activity-link {
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 900;
+      text-decoration: none;
+    }
+
+    .conversation-panel {
+      margin-top: 54px;
+      padding: clamp(24px, 4vw, 42px);
+      border-top: 1px solid #e7eaf1;
+      border-bottom: 1px solid #e7eaf1;
+      background: #fafbfe;
+    }
+
+    .conversation-panel h2 {
+      margin: 0;
+      color: var(--primary);
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .conversation-grid {
+      display: flex;
+      gap: 12px;
+      margin-top: 22px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .conversation-item {
+      flex: 0 0 245px;
+      min-height: 150px;
+      padding: 18px;
+      border: 1px solid #e7eaf1;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .conversation-item strong {
+      display: block;
+      color: var(--primary-deep);
+      font-size: 16px;
+    }
+
+    .conversation-item p {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.48;
+    }
+
+    .activity-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 20, 44, .72);
+    }
+
+    .activity-modal.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(980px, 100%);
+      max-height: min(760px, calc(100vh - 48px));
+      overflow: auto;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, .36);
+    }
+
+    .modal-media {
+      height: 330px;
+      background: var(--primary);
+    }
+
+    .modal-media img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .modal-body {
+      padding: 26px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      color: var(--primary-deep);
+      font-size: clamp(26px, 4vw, 44px);
+      line-height: 1;
+    }
+
+    .modal-close {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--primary);
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .modal-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .modal-detail {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcff;
+    }
+
+    .modal-detail span {
+      display: block;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .modal-detail strong {
+      display: block;
+      margin-top: 5px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 920px) {
+      .activities-body .nav-menu {
+        background: rgba(255, 255, 255, .98);
+        border-top: 1px solid #e7eaf1;
+        box-shadow: 0 18px 34px rgba(23, 32, 51, .08);
+      }
+
+      .activities-body .nav-link.active::after {
+        left: 12px;
+        right: auto;
+        width: 42px;
+      }
+
+      .activities-hero {
+        min-height: 320px;
+        background:
+          linear-gradient(115deg, rgba(25, 36, 91, .98) 0%, rgba(48, 62, 127, .92) 68%, rgba(219, 23, 116, .5) 100%),
+          #303E7F;
+      }
+
+      .activities-toolbar {
+        position: static;
+      }
+
+      .activities-toolbar .container {
+        align-items: stretch;
+        flex-direction: column;
+        padding-top: 16px;
+        padding-bottom: 16px;
+      }
+
+      .filter-tabs {
+        overflow-x: auto;
+      }
+
+      .modal-details {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-card,
+      .activity-card.featured {
+        width: 100%;
+        grid-template-columns: 1fr;
+        gap: 18px;
+      }
+
+      .activity-card:nth-child(even) {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-card:nth-child(even) .activity-media {
+        order: 0;
+      }
+
+      .activity-media img,
+      .activity-card.featured .activity-media img {
+        min-height: 260px;
+        max-height: 360px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .activities-hero .container {
+        padding-top: 54px;
+        padding-bottom: 34px;
+      }
+
+      .activity-content,
+      .conversation-panel,
+      .modal-body {
+        padding: 18px;
+      }
+
+      .activity-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .activity-btn {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
-<body>
+<body class="activities-body">
   <nav class="site-nav" aria-label="Navegación principal">
     <div class="nav-inner">
       <a class="brand" href="index.html" aria-label="Ir al inicio">
@@ -22,7 +724,7 @@
         <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled">Zonificación</span></li>
         <li><a class="nav-link" href="sectores.html">Sectores y Sub-sectores</a></li>
         <li><a class="nav-link" href="oposicion.html">Oposición</a></li>
-        <li class="nav-disabled-wrap" title="Próximamente"><span class="nav-link disabled active" aria-current="page">Actividades</span></li>
+        <li><a class="nav-link active" href="actividades.html" aria-current="page">Actividades</a></li>
       </ul>
     </div>
   </nav>
@@ -30,66 +732,197 @@
   <main class="activities-page">
     <section class="activities-hero">
       <div class="container">
+        <div class="eyebrow">Agenda territorial</div>
         <h1>Actividades</h1>
+        <p>Recorridos, reuniones y conversaciones con vecinos de San Borja.</p>
       </div>
     </section>
 
-    <section class="container">
-      <div class="media-grid">
-        <article class="media-card">
-          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
-          </svg>
-          <span>Contenido próximamente</span>
-        </article>
-        <article class="media-card">
-          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
-          </svg>
-          <span>Contenido próximamente</span>
-        </article>
-        <article class="media-card">
-          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
-          </svg>
-          <span>Contenido próximamente</span>
-        </article>
-        <article class="media-card">
-          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
-          </svg>
-          <span>Contenido próximamente</span>
-        </article>
-        <article class="media-card">
-          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
-          </svg>
-          <span>Contenido próximamente</span>
-        </article>
-        <article class="media-card">
-          <svg class="media-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-            <path d="m7 16 4-4 3 3 2-2 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="8" cy="9" r="1.2" fill="currentColor"/>
-          </svg>
-          <span>Contenido próximamente</span>
-        </article>
+    <section class="activities-toolbar" aria-label="Filtros de actividades">
+      <div class="container">
+        <div class="toolbar-title">Explorar actividades</div>
+        <div class="filter-tabs" role="tablist" aria-label="Filtrar por tipo">
+          <button class="filter-tab active" type="button" role="tab" aria-selected="true" data-filter="all">Todas</button>
+          <button class="filter-tab" type="button" role="tab" aria-selected="false" data-filter="recorrido">Recorridos</button>
+          <button class="filter-tab" type="button" role="tab" aria-selected="false" data-filter="reunion">Reuniones</button>
+          <button class="filter-tab" type="button" role="tab" aria-selected="false" data-filter="escucha">Escucha vecinal</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="activities-section">
+      <div class="container">
+        <div class="activity-grid" id="activity-grid">
+          <article class="activity-card featured" data-type="recorrido">
+            <figure class="activity-media">
+              <img src="icono.png" alt="Recorrido del candidato con vecinos en San Borja">
+              <span class="media-badge">Galería</span>
+              <div class="media-stack" aria-hidden="true">
+                <div class="media-chip"><img src="icono.png" alt=""></div>
+                <div class="media-chip"><img src="icono.png" alt=""></div>
+                <div class="media-chip"><img src="icono.png" alt=""></div>
+              </div>
+            </figure>
+            <div class="activity-content">
+              <div class="activity-meta">
+                <span class="pill accent">Recorrido</span>
+                <span class="pill">Sector 1</span>
+                <span class="pill">Mayo 2026</span>
+              </div>
+              <h2>Caminata vecinal por San Borja Norte</h2>
+              <p class="activity-summary">Encuentro casa por casa para recoger preocupaciones de seguridad, limpieza urbana y mantenimiento de espacios públicos.</p>
+              <div class="activity-location">
+                <div class="location-mark">D</div>
+                <div class="location-text">
+                  <span>Dirección</span>
+                  <strong>Av. San Borja Norte con Calle del Lenguaje</strong>
+                </div>
+              </div>
+              <ul class="ideas-list">
+                <li>Reforzar puntos críticos de iluminación en calles residenciales.</li>
+                <li>Coordinar mantenimiento preventivo de veredas y áreas verdes.</li>
+                <li>Crear reportes vecinales simples para seguimiento de incidencias.</li>
+              </ul>
+              <div class="activity-actions">
+                <button class="activity-btn" type="button" data-open="0">Ver detalle</button>
+                <a class="activity-link" href="avance-campana.html">Ver en mapa</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="activity-card" data-type="reunion">
+            <figure class="activity-media">
+              <img src="icono.png" alt="Reunión con emprendedores y comerciantes de San Borja">
+              <span class="media-badge">Video</span>
+            </figure>
+            <div class="activity-content">
+              <div class="activity-meta">
+                <span class="pill accent">Reunión</span>
+                <span class="pill">Sector 4</span>
+              </div>
+              <h2>Diálogo con emprendedores locales</h2>
+              <p class="activity-summary">Conversación sobre permisos, seguridad comercial y mayor difusión de negocios barriales.</p>
+              <div class="activity-location">
+                <div class="location-mark">D</div>
+                <div class="location-text">
+                  <span>Dirección</span>
+                  <strong>Av. Aviación, zona comercial de San Borja</strong>
+                </div>
+              </div>
+              <ul class="ideas-list">
+                <li>Ordenar canales de atención municipal para pequeños negocios.</li>
+                <li>Impulsar ferias vecinales por rubro y sector.</li>
+              </ul>
+              <div class="activity-actions">
+                <button class="activity-btn" type="button" data-open="1">Ver detalle</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="activity-card" data-type="escucha">
+            <figure class="activity-media">
+              <img src="icono.png" alt="Conversación con vecinos sobre parques y espacios públicos">
+              <span class="media-badge">Audio</span>
+            </figure>
+            <div class="activity-content">
+              <div class="activity-meta">
+                <span class="pill accent">Escucha</span>
+                <span class="pill">Sector 7</span>
+              </div>
+              <h2>Parques seguros y activos</h2>
+              <p class="activity-summary">Vecinos propusieron programación barrial, mejor iluminación y vigilancia en horarios de alta circulación.</p>
+              <div class="activity-location">
+                <div class="location-mark">D</div>
+                <div class="location-text">
+                  <span>Dirección</span>
+                  <strong>Parque cercano a Av. Boulevard de Surco</strong>
+                </div>
+              </div>
+              <ul class="ideas-list">
+                <li>Recuperar zonas con baja visibilidad nocturna.</li>
+                <li>Actividades culturales pequeñas para uso constante del parque.</li>
+              </ul>
+              <div class="activity-actions">
+                <button class="activity-btn" type="button" data-open="2">Ver detalle</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="activity-card" data-type="recorrido">
+            <figure class="activity-media">
+              <img src="icono.png" alt="Visita a junta vecinal en zona residencial">
+              <span class="media-badge">Fotos</span>
+            </figure>
+            <div class="activity-content">
+              <div class="activity-meta">
+                <span class="pill accent">Recorrido</span>
+                <span class="pill">Sector 10</span>
+              </div>
+              <h2>Visita a junta vecinal</h2>
+              <p class="activity-summary">Revisión de prioridades por cuadra: limpieza, poda, tránsito calmado y respuesta municipal.</p>
+              <div class="activity-location">
+                <div class="location-mark">D</div>
+                <div class="location-text">
+                  <span>Dirección</span>
+                  <strong>Torres de Limatambo, San Borja</strong>
+                </div>
+              </div>
+              <ul class="ideas-list">
+                <li>Mapa de incidencias por manzana para priorizar cuadrillas.</li>
+                <li>Mejor comunicación de cronogramas municipales.</li>
+              </ul>
+              <div class="activity-actions">
+                <button class="activity-btn" type="button" data-open="3">Ver detalle</button>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <aside class="conversation-panel">
+          <div class="eyebrow dark">Síntesis de conversaciones</div>
+          <h2>Ideas centrales que se repiten en campo</h2>
+          <div class="conversation-grid">
+            <div class="conversation-item">
+              <strong>Seguridad cotidiana</strong>
+              <p>Mayor presencia preventiva, iluminación útil y respuesta rápida en calles con poca actividad nocturna.</p>
+            </div>
+            <div class="conversation-item">
+              <strong>Gestión visible</strong>
+              <p>Los vecinos piden saber cuándo se atiende una incidencia y quién hace seguimiento.</p>
+            </div>
+            <div class="conversation-item">
+              <strong>Espacios públicos</strong>
+              <p>Parques cuidados, accesibles y con programación sencilla para familias, adultos mayores y jóvenes.</p>
+            </div>
+            <div class="conversation-item">
+              <strong>Comercio local</strong>
+              <p>Menos fricción administrativa y más promoción barrial para emprendimientos de San Borja.</p>
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
   </main>
 
+  <div class="activity-modal" id="activity-modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-media"><img id="modal-img" src="icono.png" alt=""></div>
+      <div class="modal-body">
+        <div class="modal-head">
+          <h2 id="modal-title">Actividad</h2>
+          <button class="modal-close" type="button" aria-label="Cerrar detalle">×</button>
+        </div>
+        <p class="activity-summary" id="modal-summary"></p>
+        <div class="modal-details">
+          <div class="modal-detail"><span>Tipo</span><strong id="modal-type"></strong></div>
+          <div class="modal-detail"><span>Ubicación</span><strong id="modal-location"></strong></div>
+        </div>
+        <ul class="ideas-list" id="modal-ideas"></ul>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Control del menú responsive compartido.
     const nav = document.querySelector('.site-nav');
     const toggle = document.querySelector('.nav-toggle');
     toggle.addEventListener('click', () => {
@@ -97,11 +930,114 @@
       toggle.setAttribute('aria-expanded', String(isOpen));
     });
 
-    // TODO: insertar aquí las rutas de imágenes cuando estén disponibles.
-    // const imagePaths = ["data/IMAGEN_1.jpg", "data/IMAGEN_2.jpg"];
+    const activityDetails = [
+      {
+        title: 'Caminata vecinal por San Borja Norte',
+        type: 'Recorrido territorial',
+        location: 'Av. San Borja Norte con Calle del Lenguaje',
+        image: 'icono.png',
+        summary: 'Encuentro casa por casa para recoger preocupaciones de seguridad, limpieza urbana y mantenimiento de espacios públicos.',
+        ideas: [
+          'Reforzar puntos críticos de iluminación en calles residenciales.',
+          'Coordinar mantenimiento preventivo de veredas y áreas verdes.',
+          'Crear reportes vecinales simples para seguimiento de incidencias.'
+        ]
+      },
+      {
+        title: 'Diálogo con emprendedores locales',
+        type: 'Reunión vecinal',
+        location: 'Av. Aviación, zona comercial de San Borja',
+        image: 'icono.png',
+        summary: 'Conversación sobre permisos, seguridad comercial y mayor difusión de negocios barriales.',
+        ideas: [
+          'Ordenar canales de atención municipal para pequeños negocios.',
+          'Impulsar ferias vecinales por rubro y sector.',
+          'Diseñar rutas de comunicación para alertas comerciales.'
+        ]
+      },
+      {
+        title: 'Parques seguros y activos',
+        type: 'Escucha vecinal',
+        location: 'Parque cercano a Av. Boulevard de Surco',
+        image: 'icono.png',
+        summary: 'Vecinos propusieron programación barrial, mejor iluminación y vigilancia en horarios de alta circulación.',
+        ideas: [
+          'Recuperar zonas con baja visibilidad nocturna.',
+          'Actividades culturales pequeñas para uso constante del parque.',
+          'Mejorar coordinación con juntas vecinales por horarios.'
+        ]
+      },
+      {
+        title: 'Visita a junta vecinal',
+        type: 'Recorrido territorial',
+        location: 'Torres de Limatambo, San Borja',
+        image: 'icono.png',
+        summary: 'Revisión de prioridades por cuadra: limpieza, poda, tránsito calmado y respuesta municipal.',
+        ideas: [
+          'Mapa de incidencias por manzana para priorizar cuadrillas.',
+          'Mejor comunicación de cronogramas municipales.',
+          'Canal de seguimiento para solicitudes recurrentes.'
+        ]
+      }
+    ];
 
-    // TODO: insertar aquí las rutas de videos cuando estén disponibles.
-    // const videoPaths = ["data/VIDEO_1.mp4", "data/VIDEO_2.mp4"];
+    const tabs = document.querySelectorAll('.filter-tab');
+    const cards = document.querySelectorAll('.activity-card');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const filter = tab.dataset.filter;
+        tabs.forEach(item => {
+          const selected = item === tab;
+          item.classList.toggle('active', selected);
+          item.setAttribute('aria-selected', String(selected));
+        });
+        cards.forEach(card => {
+          const visible = filter === 'all' || card.dataset.type === filter;
+          card.style.display = visible ? 'grid' : 'none';
+        });
+      });
+    });
+
+    const modal = document.getElementById('activity-modal');
+    const closeBtn = modal.querySelector('.modal-close');
+
+    function openActivity(index) {
+      const data = activityDetails[index];
+      if (!data) return;
+      document.getElementById('modal-img').src = data.image;
+      document.getElementById('modal-img').alt = data.title;
+      document.getElementById('modal-title').textContent = data.title;
+      document.getElementById('modal-summary').textContent = data.summary;
+      document.getElementById('modal-type').textContent = data.type;
+      document.getElementById('modal-location').textContent = data.location;
+      const modalIdeas = document.getElementById('modal-ideas');
+      modalIdeas.replaceChildren();
+      data.ideas.forEach(idea => {
+        const item = document.createElement('li');
+        item.textContent = idea;
+        modalIdeas.appendChild(item);
+      });
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      closeBtn.focus();
+    }
+
+    function closeActivity() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.querySelectorAll('[data-open]').forEach(btn => {
+      btn.addEventListener('click', () => openActivity(parseInt(btn.dataset.open, 10)));
+    });
+
+    closeBtn.addEventListener('click', closeActivity);
+    modal.addEventListener('click', event => {
+      if (event.target === modal) closeActivity();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && modal.classList.contains('open')) closeActivity();
+    });
   </script>
 </body>
 </html>
