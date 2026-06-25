@@ -199,6 +199,13 @@
       content: none;
     }
 
+    .activity-status {
+      padding: 24px 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
     .activity-card {
       position: relative;
       display: grid;
@@ -930,12 +937,21 @@
       toggle.setAttribute('aria-expanded', String(isOpen));
     });
 
-    const activityDetails = [
+    const ACTIVITIES_ENDPOINT = 'https://script.google.com/macros/s/AKfycbw31eiRuVE6aDiFMSCU8FRB21OA2SbWz3GlAMVIOY_iTiM6kYLtjWCm2lCJgSKFK26R/exec';
+    const ACTIVITIES_REFRESH_MS = 60000;
+    const FALLBACK_ACTIVITIES = [
       {
+        id: 'recorrido-san-borja-norte',
         title: 'Caminata vecinal por San Borja Norte',
+        category: 'recorrido',
+        categoryLabel: 'Recorrido',
+        dateLabel: 'Mayo 2026',
+        sector: 'Sector 1',
+        badge: 'Galería',
         type: 'Recorrido territorial',
         location: 'Av. San Borja Norte con Calle del Lenguaje',
         image: 'icono.png',
+        photos: ['icono.png', 'icono.png', 'icono.png'],
         summary: 'Encuentro casa por casa para recoger preocupaciones de seguridad, limpieza urbana y mantenimiento de espacios públicos.',
         ideas: [
           'Reforzar puntos críticos de iluminación en calles residenciales.',
@@ -944,10 +960,16 @@
         ]
       },
       {
+        id: 'dialogo-emprendedores-locales',
         title: 'Diálogo con emprendedores locales',
+        category: 'reunion',
+        categoryLabel: 'Reunión',
+        sector: 'Sector 4',
+        badge: 'Video',
         type: 'Reunión vecinal',
         location: 'Av. Aviación, zona comercial de San Borja',
         image: 'icono.png',
+        photos: ['icono.png'],
         summary: 'Conversación sobre permisos, seguridad comercial y mayor difusión de negocios barriales.',
         ideas: [
           'Ordenar canales de atención municipal para pequeños negocios.',
@@ -956,10 +978,16 @@
         ]
       },
       {
+        id: 'parques-seguros-activos',
         title: 'Parques seguros y activos',
+        category: 'escucha',
+        categoryLabel: 'Escucha',
+        sector: 'Sector 7',
+        badge: 'Audio',
         type: 'Escucha vecinal',
         location: 'Parque cercano a Av. Boulevard de Surco',
         image: 'icono.png',
+        photos: ['icono.png'],
         summary: 'Vecinos propusieron programación barrial, mejor iluminación y vigilancia en horarios de alta circulación.',
         ideas: [
           'Recuperar zonas con baja visibilidad nocturna.',
@@ -968,10 +996,16 @@
         ]
       },
       {
+        id: 'visita-junta-vecinal',
         title: 'Visita a junta vecinal',
+        category: 'recorrido',
+        categoryLabel: 'Recorrido',
+        sector: 'Sector 10',
+        badge: 'Fotos',
         type: 'Recorrido territorial',
         location: 'Torres de Limatambo, San Borja',
         image: 'icono.png',
+        photos: ['icono.png'],
         summary: 'Revisión de prioridades por cuadra: limpieza, poda, tránsito calmado y respuesta municipal.',
         ideas: [
           'Mapa de incidencias por manzana para priorizar cuadrillas.',
@@ -982,7 +1016,183 @@
     ];
 
     const tabs = document.querySelectorAll('.filter-tab');
-    const cards = document.querySelectorAll('.activity-card');
+    const grid = document.getElementById('activity-grid');
+    let activityDetails = [];
+    let activeFilter = 'all';
+
+    function escapeText(value) {
+      const div = document.createElement('div');
+      div.textContent = value || '';
+      return div.innerHTML;
+    }
+
+    function normalizeCategory(value) {
+      return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '-');
+    }
+
+    function getCategoryLabel(activity) {
+      return activity.categoryLabel || activity.tipo || activity.type || 'Actividad';
+    }
+
+    function getCategorySlug(activity) {
+      const value = activity.category || activity.categoria || getCategoryLabel(activity);
+      const slug = normalizeCategory(value);
+      if (slug.includes('recorrido')) return 'recorrido';
+      if (slug.includes('reunion')) return 'reunion';
+      if (slug.includes('escucha')) return 'escucha';
+      return slug || 'actividad';
+    }
+
+    function normalizeActivity(activity, index) {
+      const photos = Array.isArray(activity.photos) ? activity.photos : [];
+      const image = activity.image || activity.cover || photos[0] || 'icono.png';
+      const ideas = Array.isArray(activity.ideas) ? activity.ideas.filter(Boolean) : [];
+      const category = getCategorySlug(activity);
+
+      return {
+        id: activity.id || `actividad-${index}`,
+        title: activity.title || activity.titulo || 'Actividad sin título',
+        category,
+        categoryLabel: activity.categoryLabel || activity.tipo || getCategoryLabel(activity),
+        sector: activity.sector || '',
+        dateLabel: activity.dateLabel || activity.fecha || '',
+        badge: activity.badge || (photos.length > 1 ? 'Galería' : 'Fotos'),
+        type: activity.type || activity.tipo || getCategoryLabel(activity),
+        location: activity.location || activity.ubicacion || activity.direccion || 'San Borja',
+        image,
+        photos: photos.length ? photos : [image],
+        summary: activity.summary || activity.resumen || 'Actividad registrada en campo.',
+        ideas,
+        mapUrl: activity.mapUrl || activity.mapa || ''
+      };
+    }
+
+    function normalizeActivitiesPayload(payload) {
+      const source = Array.isArray(payload) ? payload : (payload && payload.activities);
+      return (source || []).map(normalizeActivity);
+    }
+
+    function renderActivities(activities) {
+      activityDetails = activities.length ? activities : FALLBACK_ACTIVITIES.map(normalizeActivity);
+      grid.replaceChildren();
+
+      activityDetails.forEach((activity, index) => {
+        const article = document.createElement('article');
+        article.className = index === 0 ? 'activity-card featured' : 'activity-card';
+        article.dataset.type = activity.category;
+
+        const pills = [activity.categoryLabel, activity.sector, activity.dateLabel]
+          .filter(Boolean)
+          .map((pill, pillIndex) => `<span class="pill${pillIndex === 0 ? ' accent' : ''}">${escapeText(pill)}</span>`)
+          .join('');
+        const ideas = activity.ideas.slice(0, 3)
+          .map(idea => `<li>${escapeText(idea)}</li>`)
+          .join('');
+        const chips = activity.photos.slice(1, 4)
+          .map(photo => `<div class="media-chip"><img src="${escapeText(photo)}" alt=""></div>`)
+          .join('');
+        const mapLink = activity.mapUrl
+          ? `<a class="activity-link" href="${escapeText(activity.mapUrl)}">Ver en mapa</a>`
+          : '';
+
+        article.innerHTML = `
+          <figure class="activity-media">
+            <img src="${escapeText(activity.image)}" alt="${escapeText(activity.title)}" loading="${index === 0 ? 'eager' : 'lazy'}">
+            <span class="media-badge">${escapeText(activity.badge)}</span>
+            ${chips ? `<div class="media-stack" aria-hidden="true">${chips}</div>` : ''}
+          </figure>
+          <div class="activity-content">
+            <div class="activity-meta">${pills}</div>
+            <h2>${escapeText(activity.title)}</h2>
+            <p class="activity-summary">${escapeText(activity.summary)}</p>
+            <div class="activity-location">
+              <div class="location-mark">D</div>
+              <div class="location-text">
+                <span>Dirección</span>
+                <strong>${escapeText(activity.location)}</strong>
+              </div>
+            </div>
+            ${ideas ? `<ul class="ideas-list">${ideas}</ul>` : ''}
+            <div class="activity-actions">
+              <button class="activity-btn" type="button" data-open="${index}">Ver detalle</button>
+              ${mapLink}
+            </div>
+          </div>
+        `;
+
+        grid.appendChild(article);
+      });
+
+      applyFilter(activeFilter);
+    }
+
+    function setStatus(message) {
+      grid.replaceChildren();
+      const status = document.createElement('div');
+      status.className = 'activity-status';
+      status.textContent = message;
+      grid.appendChild(status);
+    }
+
+    function applyFilter(filter) {
+      activeFilter = filter;
+      document.querySelectorAll('.activity-card').forEach(card => {
+        const visible = filter === 'all' || card.dataset.type === filter;
+        card.style.display = visible ? 'grid' : 'none';
+      });
+    }
+
+    function loadJSONP(url) {
+      return new Promise((resolve, reject) => {
+        const callbackName = `renderActivitiesData_${Date.now()}`;
+        const separator = url.includes('?') ? '&' : '?';
+        const script = document.createElement('script');
+        const timer = window.setTimeout(() => {
+          cleanup();
+          reject(new Error('Tiempo de espera agotado'));
+        }, 12000);
+
+        function cleanup() {
+          window.clearTimeout(timer);
+          script.remove();
+          delete window[callbackName];
+        }
+
+        window[callbackName] = data => {
+          cleanup();
+          resolve(data);
+        };
+
+        script.onerror = () => {
+          cleanup();
+          reject(new Error('No se pudo cargar el endpoint'));
+        };
+        script.src = `${url}${separator}callback=${callbackName}&t=${Date.now()}`;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadActivities() {
+      if (!ACTIVITIES_ENDPOINT) {
+        renderActivities(FALLBACK_ACTIVITIES.map(normalizeActivity));
+        return;
+      }
+
+      if (!activityDetails.length) setStatus('Cargando actividades...');
+      try {
+        const payload = await loadJSONP(ACTIVITIES_ENDPOINT);
+        const activities = normalizeActivitiesPayload(payload);
+        renderActivities(activities);
+      } catch (error) {
+        console.error('Error al cargar actividades:', error);
+        renderActivities(FALLBACK_ACTIVITIES.map(normalizeActivity));
+      }
+    }
+
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const filter = tab.dataset.filter;
@@ -991,10 +1201,7 @@
           item.classList.toggle('active', selected);
           item.setAttribute('aria-selected', String(selected));
         });
-        cards.forEach(card => {
-          const visible = filter === 'all' || card.dataset.type === filter;
-          card.style.display = visible ? 'grid' : 'none';
-        });
+        applyFilter(filter);
       });
     });
 
@@ -1027,8 +1234,9 @@
       modal.setAttribute('aria-hidden', 'true');
     }
 
-    document.querySelectorAll('[data-open]').forEach(btn => {
-      btn.addEventListener('click', () => openActivity(parseInt(btn.dataset.open, 10)));
+    grid.addEventListener('click', event => {
+      const btn = event.target.closest('[data-open]');
+      if (btn) openActivity(parseInt(btn.dataset.open, 10));
     });
 
     closeBtn.addEventListener('click', closeActivity);
@@ -1038,6 +1246,11 @@
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape' && modal.classList.contains('open')) closeActivity();
     });
+
+    loadActivities();
+    if (ACTIVITIES_ENDPOINT) {
+      window.setInterval(loadActivities, ACTIVITIES_REFRESH_MS);
+    }
   </script>
 </body>
 </html>
