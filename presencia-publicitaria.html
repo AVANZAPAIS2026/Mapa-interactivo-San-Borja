@@ -72,7 +72,8 @@
     const GEOPOINT_KEYS = ['geopoint', 'geo_point', 'geo_point_2d', 'coordenadas', 'coordenada', 'ubicacion', 'ubicacion_gps', 'punto_gps'];
 
     const GEOJSON_LAYER_COLOR = '#303E7F';
-    const PAINTED_LOT_COLOR = '#DB1774';
+    const PANEL_LOT_COLOR = '#233D87';
+    const AFICHE_LOT_COLOR = '#EF038B';
     const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=52629814&single=true&output=tsv';
     const GEOJSON_PATHS = [
       'data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson',
@@ -146,20 +147,41 @@
       throw new Error(`GeoJSON no encontrado. Revisé: ${errors.join(' | ')}`);
     }
 
-    function geojsonLayerStyle() {
+    function normalizeTipoValue(value) {
+      const tipo = String(value ?? '').trim().toUpperCase();
+      if (tipo === 'PANEL') return 'PANEL';
+      if (tipo === 'AFICHE') return 'AFICHE';
+      return null;
+    }
+
+    function getLotFillColor(feature) {
+      const tipo = feature?.properties?._tipo;
+      if (tipo === 'PANEL') return PANEL_LOT_COLOR;
+      if (tipo === 'AFICHE') return AFICHE_LOT_COLOR;
+      return GEOJSON_LAYER_COLOR;
+    }
+
+    function getRowFillColor(row) {
+      const tipo = normalizeTipoValue(row?.[COL.tipo]);
+      if (tipo === 'PANEL') return PANEL_LOT_COLOR;
+      if (tipo === 'AFICHE') return AFICHE_LOT_COLOR;
+      return GEOJSON_LAYER_COLOR;
+    }
+
+    function geojsonLayerStyle(feature) {
       return {
         color: GEOJSON_LAYER_COLOR,
         weight: .8,
-        fillColor: GEOJSON_LAYER_COLOR,
+        fillColor: getLotFillColor(feature),
         fillOpacity: .6,
       };
     }
 
-    function paintedLotStyle() {
+    function paintedLotStyle(feature) {
       return {
         color: GEOJSON_LAYER_COLOR,
         weight: .8,
-        fillColor: PAINTED_LOT_COLOR,
+        fillColor: getLotFillColor(feature),
         fillOpacity: .6,
       };
     }
@@ -168,7 +190,7 @@
       layer.on({
         mouseover(e) {
           const s = feature.properties._sector;
-          const fillColor = s ? PAINTED_LOT_COLOR : GEOJSON_LAYER_COLOR;
+          const fillColor = s ? getLotFillColor(feature) : GEOJSON_LAYER_COLOR;
           e.target.setStyle({ weight: 2, color: GEOJSON_LAYER_COLOR, fillColor, fillOpacity: .92 });
           const tip = s
             ? `<b>Sector ${s}</b> · Lote #${feature.properties._lote_idx ?? '-'}<br>${feature.properties._puntos?.length ?? 0} registro(s)`
@@ -176,7 +198,7 @@
           e.target.bindTooltip(tip, { className: 'lt-tip', sticky: true }).openTooltip();
         },
         mouseout(e) {
-          e.target.setStyle(e.target.feature.properties._sector ? paintedLotStyle() : geojsonLayerStyle());
+          e.target.setStyle(e.target.feature.properties._sector ? paintedLotStyle(e.target.feature) : geojsonLayerStyle(e.target.feature));
           e.target.closeTooltip();
         },
         click(e) {
@@ -421,6 +443,7 @@
       lotesGeoJSON.features.forEach(f => {
         delete f.properties._sector;
         delete f.properties._puntos;
+        delete f.properties._tipo;
       });
       sectorCounts = {};
 
@@ -445,8 +468,15 @@
               if (!feat.properties._puntos) {
                 feat.properties._puntos = [];
                 feat.properties._sector = sector;
+                feat.properties._tipo = null;
               }
               feat.properties._puntos.push(row);
+              const tipo = normalizeTipoValue(row[COL.tipo]);
+              if (tipo === 'PANEL') {
+                feat.properties._tipo = 'PANEL';
+              } else if (tipo === 'AFICHE' && feat.properties._tipo !== 'PANEL') {
+                feat.properties._tipo = 'AFICHE';
+              }
               sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
               break;
             }
@@ -455,7 +485,7 @@
       });
 
       lotesLayer.eachLayer(layer => {
-        layer.setStyle(layer.feature.properties._sector ? paintedLotStyle() : geojsonLayerStyle());
+        layer.setStyle(layer.feature.properties._sector ? paintedLotStyle(layer.feature) : geojsonLayerStyle(layer.feature));
       });
 
       const markers = valid.map(({ row, coords }) => {
@@ -463,7 +493,7 @@
         const sector = parseInt(row[colSector], 10);
         const icon = L.divIcon({
           className: '',
-          html: `<div style="width:9px;height:9px;border-radius:50%;background:${PAINTED_LOT_COLOR};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
+          html: `<div style="width:9px;height:9px;border-radius:50%;background:${getRowFillColor(row)};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
           iconSize: [9, 9],
           iconAnchor: [4, 4],
         });
