@@ -94,7 +94,6 @@
         maxZoom: 19,
       }).addTo(map);
 
-      ensureMixedTypePattern();
       loadLotes();
     }
 
@@ -106,6 +105,8 @@
           style: geojsonLayerStyle,
           onEachFeature: bindLoteEvents,
         }).addTo(map);
+
+        ensureMixedTypePattern();
 
         if (lotesGeoJSON.features && lotesGeoJSON.features.length > 0) {
           map.fitBounds(lotesLayer.getBounds(), { padding: [20, 20] });
