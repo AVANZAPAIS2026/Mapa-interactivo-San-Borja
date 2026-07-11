@@ -86,7 +86,7 @@
     window._detectedSectorCol = null;
 
     function initMap() {
-      map = L.map('map', { zoomControl: true, preferCanvas: true })
+      map = L.map('map', { zoomControl: true })
         .setView([-12.105, -76.990], 14);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -94,6 +94,7 @@
         maxZoom: 19,
       }).addTo(map);
 
+      ensureMixedTypePattern();
       loadLotes();
     }
 
@@ -154,10 +155,28 @@
       return null;
     }
 
+    function ensureMixedTypePattern() {
+      if (!map) return;
+      const overlayPane = map.getPane('overlayPane');
+      if (!overlayPane) return;
+      const svg = overlayPane.querySelector('svg');
+      if (!svg || svg.querySelector('#mixed-type-pattern')) return;
+
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.innerHTML = `
+        <pattern id="mixed-type-pattern" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="8" height="8" fill="${PANEL_LOT_COLOR}" />
+          <rect width="4" height="8" fill="${AFICHE_LOT_COLOR}" />
+        </pattern>
+      `;
+      svg.insertBefore(defs, svg.firstChild);
+    }
+
     function getLotFillColor(feature) {
       const tipo = feature?.properties?._tipo;
       if (tipo === 'PANEL') return PANEL_LOT_COLOR;
       if (tipo === 'AFICHE') return AFICHE_LOT_COLOR;
+      if (tipo === 'MIXED') return 'url(#mixed-type-pattern)';
       return GEOJSON_LAYER_COLOR;
     }
 
@@ -473,9 +492,17 @@
               feat.properties._puntos.push(row);
               const tipo = normalizeTipoValue(row[COL.tipo]);
               if (tipo === 'PANEL') {
-                feat.properties._tipo = 'PANEL';
-              } else if (tipo === 'AFICHE' && feat.properties._tipo !== 'PANEL') {
-                feat.properties._tipo = 'AFICHE';
+                if (feat.properties._tipo === 'AFICHE') {
+                  feat.properties._tipo = 'MIXED';
+                } else if (!feat.properties._tipo) {
+                  feat.properties._tipo = 'PANEL';
+                }
+              } else if (tipo === 'AFICHE') {
+                if (feat.properties._tipo === 'PANEL') {
+                  feat.properties._tipo = 'MIXED';
+                } else if (!feat.properties._tipo) {
+                  feat.properties._tipo = 'AFICHE';
+                }
               }
               sectorCounts[sector] = (sectorCounts[sector] || 0) + 1;
               break;
