@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Roberth Montoya | Oposición</title>
+  <title>Roberth Montoya | Índices de Criminalidad San Borja</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <link rel="stylesheet" href="css/styles.css?v=20260522-landing"/>
 </head>
@@ -21,8 +21,8 @@
         <li><a class="nav-link" href="index.html">Inicio</a></li>
         <li><a class="nav-link" href="avance-campana.html">Avance Campaña</a></li>
         <li><a class="nav-link" href="presencia-publicitaria.html">Presencia Publicitaria</a></li>
+        <li><a class="nav-link active" href="indices-criminalidad-san-borja.html" aria-current="page">Índices de Criminalidad</a></li>
         <li><a class="nav-link" href="sectores.html">Sectores y Sub-sectores</a></li>
-        <li><a class="nav-link active" href="oposicion.html" aria-current="page">Oposición</a></li>
         <li><a class="nav-link" href="actividades.html">Actividades</a></li>
       </ul>
     </div>
@@ -33,10 +33,14 @@
   <header class="map-header">
     <div class="map-header-top">
       <div class="map-title">
-        <h1>Oposición</h1>
+        <h1>Índices de Criminalidad San Borja</h1>
         <div class="district">Distrito de San Borja · Lima, Perú</div>
       </div>
       <div id="hdr-count">Sin datos</div>
+    </div>
+    <div class="header-legend">
+      <div class="blk-title">Tipos de incidencia</div>
+      <div class="leg-grid" id="leg-grid"></div>
     </div>
   </header>
 
@@ -60,30 +64,33 @@
       latitud: 'latitud',
       longitud: 'longitud',
       direccion: 'direccion',
-      responsable: 'responsable',
-      participantes: 'participantes',
-      actividad: 'actividad',
-      agrupacion: 'agrupacion_politica',
+      sector: 'sector',
+      subsector: 'subsector',
+      tipo: 'tipo_de_incidencia',
+      presenciaAutoridades: 'presencia_de_las_autoridades',
+      tiempoLlegada: 'tiempo_de_llegada_de_las_autoridades_aprox',
     };
 
-    const GEOJSON_LAYER_COLOR = '#303E7F';
-    const GROUP_COLOR_OVERRIDES = {
-      'renovacion popular': '#33CCFF',
-    };
-    const GROUP_COLOR_PALETTE = [
+    const LAT_KEYS = ['latitud', 'latitude', 'lat'];
+    const LON_KEYS = ['longitud', 'longitude', 'lng', 'lon', 'long'];
+    const GEOPOINT_KEYS = ['geopoint', 'geo_point', 'geo_point_2d', 'coordenadas', 'coordenada', 'ubicacion', 'ubicacion_gps', 'punto_gps'];
+
+    const GEOJSON_LAYER_COLOR = '#454546';
+    const INCIDENCE_COLOR_PALETTE = [
       '#DB1774',
+      '#2563EB',
       '#F59E0B',
-      '#22C55E',
-      '#8B5CF6',
-      '#EF4444',
-      '#14B8A6',
-      '#F97316',
-      '#6366F1',
-      '#84CC16',
-      '#EC4899',
-      '#06B6D4',
+      '#16A34A',
+      '#7C3AED',
+      '#DC2626',
+      '#0891B2',
+      '#EA580C',
+      '#4F46E5',
+      '#65A30D',
+      '#BE185D',
+      '#0F766E',
     ];
-    const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1187458462&single=true&output=tsv';
+    const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=187452132&single=true&output=tsv';
     const GEOJSON_PATHS = [
       'data/SAN_BORJA_LM_geogpsperu_SuyoPomalia.geojson',
     ];
@@ -91,11 +98,12 @@
     let map, lotesLayer, puntosLayer;
     let lotesGeoJSON = null;
     let rows = [];
-    let groupColors = {};
-    window._detectedGroupCol = null;
+    let incidenceColors = {};
+    let incidenceCounts = {};
+    window._detectedIncidenceCol = null;
 
     function initMap() {
-      map = L.map('map', { zoomControl: true, preferCanvas: true })
+      map = L.map('map', { zoomControl: true })
         .setView([-12.105, -76.990], 14);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -156,20 +164,28 @@
       throw new Error(`GeoJSON no encontrado. Revisé: ${errors.join(' | ')}`);
     }
 
-    function geojsonLayerStyle() {
+    function getLotFillColor(feature) {
+      return feature?.properties?._incidence_color || GEOJSON_LAYER_COLOR;
+    }
+
+    function getRowFillColor(row) {
+      return getIncidenceColor(row?.[window._detectedIncidenceCol || COL.tipo]);
+    }
+
+    function geojsonLayerStyle(feature) {
       return {
         color: GEOJSON_LAYER_COLOR,
         weight: .8,
-        fillColor: GEOJSON_LAYER_COLOR,
-        fillOpacity: .6,
+        fillColor: getLotFillColor(feature),
+        fillOpacity: .45,
       };
     }
 
-    function groupedLotStyle(feature) {
+    function paintedLotStyle(feature) {
       return {
         color: GEOJSON_LAYER_COLOR,
         weight: .8,
-        fillColor: feature?.properties?._group_color || GEOJSON_LAYER_COLOR,
+        fillColor: getLotFillColor(feature),
         fillOpacity: .6,
       };
     }
@@ -177,16 +193,16 @@
     function bindLoteEvents(feature, layer) {
       layer.on({
         mouseover(e) {
-          const group = feature.properties._agrupacion;
-          const fillColor = feature.properties._group_color || GEOJSON_LAYER_COLOR;
+          const incidence = feature.properties._incidence;
+          const fillColor = incidence ? getLotFillColor(feature) : GEOJSON_LAYER_COLOR;
           e.target.setStyle({ weight: 2, color: GEOJSON_LAYER_COLOR, fillColor, fillOpacity: .92 });
-          const tip = group
-            ? `<b>${group}</b> · Lote #${feature.properties._lote_idx ?? '-'}<br>${feature.properties._puntos?.length ?? 0} registro(s)`
+          const tip = incidence
+            ? `<b>${incidence}</b> · Lote #${feature.properties._lote_idx ?? '-'}<br>${feature.properties._puntos?.length ?? 0} registro(s)`
             : `Lote #${feature.properties._lote_idx ?? '-'} · Sin datos`;
           e.target.bindTooltip(tip, { className: 'lt-tip', sticky: true }).openTooltip();
         },
         mouseout(e) {
-          e.target.setStyle(e.target.feature.properties._agrupacion ? groupedLotStyle(e.target.feature) : geojsonLayerStyle());
+          e.target.setStyle(e.target.feature.properties._incidence ? paintedLotStyle(e.target.feature) : geojsonLayerStyle(e.target.feature));
           e.target.closeTooltip();
         },
         click(e) {
@@ -200,19 +216,21 @@
     }
 
     function openSinglePopup(latlng, row, feature) {
-      const group = feature.properties._agrupacion || row[COL.agrupacion] || '-';
-      const lat = parseFloat(row[COL.latitud]).toFixed(5);
-      const lon = parseFloat(row[COL.longitud]).toFixed(5);
+      const incidenceCol = window._detectedIncidenceCol || COL.tipo;
+      const incidence = row[incidenceCol] || feature.properties._incidence || 'Sin incidencia';
+      const coords = getRowLatLon(row);
+      const lat = coords ? coords.lat.toFixed(5) : '-';
+      const lon = coords ? coords.lon.toFixed(5) : '-';
 
       L.popup({ maxWidth: 300, minWidth: 280 })
         .setLatLng(latlng)
         .setContent(`
           <div>
             <div class="popup-header">
-              <div class="popup-sector-badge" style="background:${feature.properties._group_color || GEOJSON_LAYER_COLOR}"></div>
+              <div class="popup-sector-badge" style="background:${getIncidenceColor(incidence)}"></div>
               <div class="popup-header-info">
-                <div class="ph-label">${group} · Lote #${feature.properties._lote_idx ?? '-'}</div>
-                <div class="ph-title">${row[COL.actividad] || 'Sin actividad'}</div>
+                <div class="ph-label">Lote #${feature.properties._lote_idx ?? '-'}</div>
+                <div class="ph-title">${incidence}</div>
               </div>
             </div>
             <div class="popup-body">
@@ -221,16 +239,28 @@
                 <div class="pr-content"><div class="pr-key">Fecha</div><div class="pr-val">${row[COL.fecha] || '-'}</div></div>
               </div>
               <div class="popup-row">
+                <div class="pr-icon">T</div>
+                <div class="pr-content"><div class="pr-key">Tipo de incidencia</div><div class="pr-val">${incidence}</div></div>
+              </div>
+              <div class="popup-row">
                 <div class="pr-icon">D</div>
                 <div class="pr-content"><div class="pr-key">Dirección</div><div class="pr-val">${row[COL.direccion] || '-'}</div></div>
               </div>
               <div class="popup-row">
-                <div class="pr-icon">R</div>
-                <div class="pr-content"><div class="pr-key">Responsable</div><div class="pr-val">${row[COL.responsable] || '-'}</div></div>
+                <div class="pr-icon">S</div>
+                <div class="pr-content"><div class="pr-key">Sector</div><div class="pr-val">${row[COL.sector] || '-'}</div></div>
               </div>
               <div class="popup-row">
-                <div class="pr-icon">P</div>
-                <div class="pr-content"><div class="pr-key">Participantes</div><div class="pr-val">${row[COL.participantes] || '-'}</div></div>
+                <div class="pr-icon">Z</div>
+                <div class="pr-content"><div class="pr-key">Subsector</div><div class="pr-val">${row[COL.subsector] || '-'}</div></div>
+              </div>
+              <div class="popup-row">
+                <div class="pr-icon">A</div>
+                <div class="pr-content"><div class="pr-key">Presencia de autoridades</div><div class="pr-val">${row[COL.presenciaAutoridades] || '-'}</div></div>
+              </div>
+              <div class="popup-row">
+                <div class="pr-icon">M</div>
+                <div class="pr-content"><div class="pr-key">Tiempo de llegada</div><div class="pr-val">${row[COL.tiempoLlegada] || '-'}</div></div>
               </div>
             </div>
             <div class="popup-footer">
@@ -242,11 +272,12 @@
     }
 
     function openMultiPopup(latlng, pts, feature) {
-      const group = feature.properties._agrupacion || '-';
+      const incidenceCol = window._detectedIncidenceCol || COL.tipo;
+      const incidence = feature.properties._incidence || '-';
       const cards = pts.map((row, i) => `
         <div class="pm-card" data-index="${i}">
-          <div class="pm-act">${row[COL.actividad] || '-'}</div>
-          <div class="pm-sub">${row[COL.agrupacion] || group} · ${row[COL.fecha] || ''}</div>
+          <div class="pm-act">${row[incidenceCol] || '-'}</div>
+          <div class="pm-sub">${row[COL.direccion] || ''}</div>
         </div>`).join('');
 
       window._multiCtx = { pts, feature };
@@ -256,9 +287,9 @@
         .setContent(`
           <div>
             <div class="popup-header">
-              <div class="popup-sector-badge" style="background:${feature.properties._group_color || GEOJSON_LAYER_COLOR}"></div>
+              <div class="popup-sector-badge" style="background:${getIncidenceColor(incidence)}"></div>
               <div class="popup-header-info">
-                <div class="ph-label">${group} · Lote #${feature.properties._lote_idx ?? '-'}</div>
+                <div class="ph-label">${incidence} · Lote #${feature.properties._lote_idx ?? '-'}</div>
                 <div class="ph-title">${pts.length} registros en este lote</div>
               </div>
             </div>
@@ -285,7 +316,8 @@
     window.openCardFromMap = (i) => {
       const { pts, feature } = window._multiCtx;
       const row = pts[i];
-      const latlng = [parseFloat(row[COL.latitud]), parseFloat(row[COL.longitud])];
+      const coords = getRowLatLon(row);
+      const latlng = coords ? [coords.lat, coords.lon] : map.getCenter();
       openSinglePopup(latlng, row, feature);
     };
 
@@ -301,6 +333,10 @@
         ingestRows(parsed.data, 'Google Sheets');
       } catch (e) {
         console.error(`Error al cargar Google Sheets: ${e.message}`);
+        if (lotesGeoJSON?.features) {
+          document.getElementById('hdr-count').textContent =
+            `${lotesGeoJSON.features.length.toLocaleString()} lotes · 0 puntos · 0 coloreados`;
+        }
       }
     }
 
@@ -315,7 +351,85 @@
     function norm(k) {
       return k.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '_').trim();
+        .replace(/[^\w]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .trim();
+    }
+
+    function parseNumber(value) {
+      if (value === null || value === undefined) return NaN;
+      if (typeof value === 'number') return value;
+      const cleaned = String(value)
+        .trim()
+        .replace(',', '.')
+        .match(/-?\d+(?:\.\d+)?/);
+      return cleaned ? parseFloat(cleaned[0]) : NaN;
+    }
+
+    function findValue(row, keys) {
+      for (const key of keys) {
+        if (row[key] !== undefined && row[key] !== '') return row[key];
+      }
+      return undefined;
+    }
+
+    function parseGeoPoint(value) {
+      if (value === null || value === undefined || value === '') return null;
+
+      if (typeof value === 'object') {
+        const lat = parseNumber(value.latitude ?? value.lat ?? value._lat);
+        const lon = parseNumber(value.longitude ?? value.lng ?? value.lon ?? value.long ?? value._long);
+        return makeLatLon(lat, lon);
+      }
+
+      const text = String(value).trim();
+      const namedLat = text.match(/(?:latitud|latitude|lat)\s*[:=]\s*(-?\d+(?:[.,]\d+)?)/i);
+      const namedLon = text.match(/(?:longitud|longitude|lng|lon|long)\s*[:=]\s*(-?\d+(?:[.,]\d+)?)/i);
+      if (namedLat && namedLon) {
+        const lat = parseNumber(namedLat[1]);
+        const lon = parseNumber(namedLon[1]);
+        return makeLatLon(lat, lon);
+      }
+
+      const nums = text.match(/-?\d+(?:[.,]\d+)?/g);
+      if (!nums || nums.length < 2) return null;
+
+      const first = parseNumber(nums[0]);
+      const second = parseNumber(nums[1]);
+      return makeLatLon(first, second);
+    }
+
+    function makeLatLon(first, second) {
+      if (isValidLatLon(first, second)) {
+        if (Math.abs(first) > 60 && Math.abs(second) < 30) return { lat: second, lon: first };
+        return { lat: first, lon: second };
+      }
+      if (isValidLatLon(second, first)) return { lat: second, lon: first };
+      return null;
+    }
+
+    function isValidLatLon(lat, lon) {
+      return Number.isFinite(lat) && Number.isFinite(lon)
+        && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+    }
+
+    function getRowLatLon(row) {
+      const lat = parseNumber(findValue(row, LAT_KEYS));
+      const lon = parseNumber(findValue(row, LON_KEYS));
+      const directCoords = makeLatLon(lat, lon);
+      if (directCoords) return directCoords;
+
+      for (const key of GEOPOINT_KEYS) {
+        const coords = parseGeoPoint(row[key]);
+        if (coords) return coords;
+      }
+
+      for (const value of Object.values(row)) {
+        const coords = parseGeoPoint(value);
+        if (coords) return coords;
+      }
+
+      return null;
     }
 
     function ingestRows(data, sourceName) {
@@ -326,45 +440,44 @@
       });
 
       const cols = Object.keys(rows[0] || {});
-      let autoCol = cols.find(c => c.toLowerCase().includes('agrupacion') && c.toLowerCase().includes('politica')) || null;
-      if (!autoCol) {
-        autoCol = cols.find(c => c.toLowerCase().includes('agrupacion')) || null;
-      }
+      const autoCol = cols.find(c => c === COL.tipo)
+        || cols.find(c => c.includes('tipo') && c.includes('incidencia'))
+        || cols.find(c => c.includes('incidencia'))
+        || cols.find(c => c.includes('tipo'));
 
-      if (autoCol) {
-        window._detectedGroupCol = autoCol;
-        applyToMap();
-      }
+      window._detectedIncidenceCol = autoCol || COL.tipo;
+      applyToMap();
     }
 
     function applyToMap() {
       if (!lotesGeoJSON || !rows.length) return;
 
-      const colGroup = window._detectedGroupCol || COL.agrupacion;
+      const incidenceCol = window._detectedIncidenceCol || COL.tipo;
       if (puntosLayer) {
         map.removeLayer(puntosLayer);
         puntosLayer = null;
       }
 
       lotesGeoJSON.features.forEach(f => {
-        delete f.properties._agrupacion;
-        delete f.properties._group_color;
+        delete f.properties._incidence;
+        delete f.properties._incidence_color;
         delete f.properties._puntos;
       });
-      groupColors = {};
+      incidenceCounts = {};
 
-      const valid = rows.filter(r =>
-        !isNaN(parseFloat(r[COL.latitud])) &&
-        !isNaN(parseFloat(r[COL.longitud])) &&
-        String(r[colGroup] || '').trim()
-      );
+      const valid = rows
+        .map(row => ({ row, coords: getRowLatLon(row), incidence: String(row[incidenceCol] || '').trim() }))
+        .filter(item => item.coords && item.incidence);
 
-      valid.forEach(row => {
-        const lat = parseFloat(row[COL.latitud]);
-        const lon = parseFloat(row[COL.longitud]);
-        const group = String(row[colGroup] || '').trim();
-        if (!group) return;
-        const color = getGroupColor(group);
+      const invalidCoords = rows.length - valid.length;
+      if (invalidCoords > 0) {
+        console.warn(`${invalidCoords} fila(s) sin coordenadas válidas. Revisa columnas latitud/longitud o geopoint.`);
+      }
+
+      valid.forEach(({ row, coords, incidence }) => {
+        const { lat, lon } = coords;
+        const color = getIncidenceColor(incidence);
+        incidenceCounts[incidence] = (incidenceCounts[incidence] || 0) + 1;
 
         const pt = turf.point([lon, lat]);
         for (const feat of lotesGeoJSON.features) {
@@ -372,8 +485,8 @@
             if (turf.booleanPointInPolygon(pt, feat)) {
               if (!feat.properties._puntos) {
                 feat.properties._puntos = [];
-                feat.properties._agrupacion = group;
-                feat.properties._group_color = color;
+                feat.properties._incidence = incidence;
+                feat.properties._incidence_color = color;
               }
               feat.properties._puntos.push(row);
               break;
@@ -383,22 +496,19 @@
       });
 
       lotesLayer.eachLayer(layer => {
-        layer.setStyle(layer.feature.properties._agrupacion ? groupedLotStyle(layer.feature) : geojsonLayerStyle());
+        layer.setStyle(layer.feature.properties._incidence ? paintedLotStyle(layer.feature) : geojsonLayerStyle(layer.feature));
       });
 
-      const markers = valid.map(row => {
-        const lat = parseFloat(row[COL.latitud]);
-        const lon = parseFloat(row[COL.longitud]);
-        const group = String(row[colGroup] || '').trim();
-        const color = group ? getGroupColor(group) : GEOJSON_LAYER_COLOR;
+      const markers = valid.map(({ row, coords, incidence }) => {
+        const { lat, lon } = coords;
         const icon = L.divIcon({
           className: '',
-          html: `<div style="width:9px;height:9px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
+          html: `<div style="width:9px;height:9px;border-radius:50%;background:${getIncidenceColor(incidence)};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)"></div>`,
           iconSize: [9, 9],
           iconAnchor: [4, 4],
         });
         const m = L.marker([lat, lon], { icon });
-        m.bindTooltip(`<b>${group || 'Sin agrupación'}</b> · ${row[COL.actividad] || '-'}`, { className: 'lt-tip', sticky: true });
+        m.bindTooltip(`<b>${incidence}</b> · ${row[COL.direccion] || '-'}`, { className: 'lt-tip', sticky: true });
         m.on('click', () => {
           const feat = lotesGeoJSON.features.find(f => f.properties._puntos?.includes(row));
           if (feat) openSinglePopup([lat, lon], row, feat);
@@ -407,30 +517,64 @@
       });
 
       puntosLayer = L.layerGroup(markers).addTo(map);
+      renderLegend();
 
-      const lotes = lotesGeoJSON.features.filter(f => f.properties._agrupacion).length;
+      const lotes = lotesGeoJSON.features.filter(f => f.properties._incidence).length;
       document.getElementById('hdr-count').textContent =
         `${lotesGeoJSON.features.length.toLocaleString()} lotes · ${valid.length} puntos · ${lotes} coloreados`;
     }
 
-    function normalizeGroupName(value) {
-      return String(value || '').toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, ' ').trim();
+    function renderLegend() {
+      const grid = document.getElementById('leg-grid');
+      grid.innerHTML = '';
+      const entries = Object.entries(incidenceCounts)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'es'));
+
+      if (!entries.length) {
+        const div = document.createElement('div');
+        div.className = 'leg-item';
+        div.innerHTML = `
+          <div class="leg-dot"></div>
+          <div>
+            <div class="leg-name">Sin incidencias</div>
+            <div class="leg-count">-</div>
+          </div>`;
+        grid.appendChild(div);
+        return;
+      }
+
+      for (const [incidence, n] of entries) {
+        const div = document.createElement('div');
+        div.className = 'leg-item active';
+        div.innerHTML = `
+          <div class="leg-dot" style="background:${getIncidenceColor(incidence)}"></div>
+          <div>
+            <div class="leg-name">${incidence}</div>
+            <div class="leg-count">${n} punto${n !== 1 ? 's' : ''}</div>
+          </div>`;
+        grid.appendChild(div);
+      }
     }
 
-    function getGroupColor(group) {
-      const key = normalizeGroupName(group);
+    function normalizeIncidenceName(value) {
+      return String(value || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function getIncidenceColor(incidence) {
+      const key = normalizeIncidenceName(incidence);
       if (!key) return GEOJSON_LAYER_COLOR;
-      if (GROUP_COLOR_OVERRIDES[key]) return GROUP_COLOR_OVERRIDES[key];
-      if (!groupColors[key]) {
-        const used = Object.keys(groupColors).length;
-        groupColors[key] = GROUP_COLOR_PALETTE[used % GROUP_COLOR_PALETTE.length];
+      if (!incidenceColors[key]) {
+        const used = Object.keys(incidenceColors).length;
+        incidenceColors[key] = INCIDENCE_COLOR_PALETTE[used % INCIDENCE_COLOR_PALETTE.length];
       }
-      return groupColors[key];
+      return incidenceColors[key];
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      renderLegend();
       initMap();
     });
   </script>

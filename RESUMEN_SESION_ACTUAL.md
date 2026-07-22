@@ -104,7 +104,6 @@ Se habilitó el enlace `Actividades` en el menú principal de:
 - `index.html`
 - `avance-campana.html`
 - `sectores.html`
-- `oposicion.html`
 - `zonificacion.html`
 - `actividades.html`
 
@@ -151,7 +150,6 @@ Cambios locales pendientes de commit:
 - `actividades.html`
 - `avance-campana.html`
 - `index.html`
-- `oposicion.html`
 - `sectores.html`
 - `zonificacion.html`
 
