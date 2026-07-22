@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <link rel="stylesheet" href="css/styles.css?v=20260522-landing"/>
 </head>
-<body class="map-page">
+<body class="map-page ads-map-page">
   <nav class="site-nav" aria-label="Navegación principal">
     <div class="nav-inner">
       <a class="brand" href="index.html" aria-label="Ir al inicio">
@@ -65,6 +65,7 @@
       direccion: 'direccion',
       sector: 'sector',
       tipo: 'tipo',
+      foto: 'foto',
     };
 
     const LAT_KEYS = ['latitud', 'latitude', 'lat'];
@@ -236,8 +237,9 @@
       const coords = getRowLatLon(row);
       const lat = coords ? coords.lat.toFixed(5) : '-';
       const lon = coords ? coords.lon.toFixed(5) : '-';
+      const photo = getPhotoData(row);
 
-      L.popup({ maxWidth: 300, minWidth: 280 })
+      L.popup({ maxWidth: 320, minWidth: 300 })
         .setLatLng(latlng)
         .setContent(`
           <div>
@@ -248,6 +250,7 @@
                 <div class="ph-title">${row[COL.tipo] || 'Sin tipo'}</div>
               </div>
             </div>
+            ${photo ? renderPopupPhoto(photo) : ''}
             <div class="popup-body">
               <div class="popup-row">
                 <div class="pr-icon">T</div>
@@ -309,6 +312,59 @@
       });
 
       popup.openOn(map);
+    }
+
+    function getPhotoData(row) {
+      const raw = String(row?.[COL.foto] || '').trim();
+      if (!raw) return null;
+
+      const urlMatch = raw.match(/https?:\/\/[^\s"'<>)]+/i);
+      const originalUrl = urlMatch ? urlMatch[0] : raw;
+      const driveId = extractDriveFileId(originalUrl);
+      if (!urlMatch && !driveId) return null;
+
+      const imageUrl = driveId
+        ? `https://drive.google.com/thumbnail?id=${encodeURIComponent(driveId)}&sz=w640`
+        : originalUrl;
+      const openUrl = driveId
+        ? `https://drive.google.com/file/d/${encodeURIComponent(driveId)}/view`
+        : originalUrl;
+
+      return { imageUrl, openUrl };
+    }
+
+    function extractDriveFileId(value) {
+      const text = String(value || '');
+      const patterns = [
+        /\/file\/d\/([a-zA-Z0-9_-]+)/,
+        /[?&]id=([a-zA-Z0-9_-]+)/,
+        /\/d\/([a-zA-Z0-9_-]+)/,
+      ];
+
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) return match[1];
+      }
+
+      return /^[a-zA-Z0-9_-]{20,}$/.test(text.trim()) ? text.trim() : null;
+    }
+
+    function renderPopupPhoto(photo) {
+      const imageUrl = escapeAttr(photo.imageUrl);
+      const openUrl = escapeAttr(photo.openUrl);
+      return `
+        <a class="popup-photo" href="${openUrl}" target="_blank" rel="noopener noreferrer" aria-label="Abrir foto en una pestaña nueva">
+          <img src="${imageUrl}" alt="Foto del registro" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.popup-photo').classList.add('photo-error')"/>
+          <span class="popup-photo-fallback">Abrir foto</span>
+        </a>`;
+    }
+
+    function escapeAttr(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
     }
 
     window.openCardFromMap = (i) => {
