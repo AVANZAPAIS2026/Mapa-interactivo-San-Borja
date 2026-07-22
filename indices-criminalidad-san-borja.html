@@ -64,16 +64,22 @@
       latitud: 'latitud',
       longitud: 'longitud',
       direccion: 'direccion',
-      sector: 'sector',
       subsector: 'subsector',
       tipo: 'tipo_de_incidencia',
       presenciaAutoridades: 'presencia_de_las_autoridades',
-      tiempoLlegada: 'tiempo_de_llegada_de_las_autoridades_aprox',
+      tiempoLlegada: 'tiempo_de_llegada_de_las_autoridades_aprox_y_en_minutos',
     };
 
     const LAT_KEYS = ['latitud', 'latitude', 'lat'];
     const LON_KEYS = ['longitud', 'longitude', 'lng', 'lon', 'long'];
     const GEOPOINT_KEYS = ['geopoint', 'geo_point', 'geo_point_2d', 'coordenadas', 'coordenada', 'ubicacion', 'ubicacion_gps', 'punto_gps'];
+    const ARRIVAL_TIME_KEYS = [
+      'tiempo_de_llegada_de_las_autoridades_aprox_y_en_minutos',
+      'tiempo_de_llegada_de_las_autoridades_aprox_en_minutos',
+      'tiempo_de_llegada_de_las_autoridades_aprox',
+      'tiempo_de_llegada_de_las_autoridades',
+      'tiempo_de_llegada',
+    ];
 
     const GEOJSON_LAYER_COLOR = '#454546';
     const INCIDENCE_COLOR_PALETTE = [
@@ -247,10 +253,6 @@
                 <div class="pr-content"><div class="pr-key">Dirección</div><div class="pr-val">${row[COL.direccion] || '-'}</div></div>
               </div>
               <div class="popup-row">
-                <div class="pr-icon">S</div>
-                <div class="pr-content"><div class="pr-key">Sector</div><div class="pr-val">${row[COL.sector] || '-'}</div></div>
-              </div>
-              <div class="popup-row">
                 <div class="pr-icon">Z</div>
                 <div class="pr-content"><div class="pr-key">Subsector</div><div class="pr-val">${row[COL.subsector] || '-'}</div></div>
               </div>
@@ -260,7 +262,7 @@
               </div>
               <div class="popup-row">
                 <div class="pr-icon">M</div>
-                <div class="pr-content"><div class="pr-key">Tiempo de llegada</div><div class="pr-val">${row[COL.tiempoLlegada] || '-'}</div></div>
+                <div class="pr-content"><div class="pr-key">Tiempo de llegada</div><div class="pr-val">${getRowField(row, ARRIVAL_TIME_KEYS) || '-'}</div></div>
               </div>
             </div>
             <div class="popup-footer">
@@ -371,6 +373,10 @@
         if (row[key] !== undefined && row[key] !== '') return row[key];
       }
       return undefined;
+    }
+
+    function getRowField(row, keys) {
+      return findValue(row, keys);
     }
 
     function parseGeoPoint(value) {
