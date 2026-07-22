@@ -777,7 +777,19 @@ a { color: inherit; }
 }
 
 .ads-map-page .leaflet-popup-content {
-  width: 300px !important;
+  width: 286px !important;
+}
+
+.ads-map-page .popup-header {
+  padding: 12px 14px 10px;
+}
+
+.ads-map-page .popup-body {
+  padding: 8px 14px;
+}
+
+.ads-map-page .popup-row {
+  padding: 6px 0;
 }
 
 .leaflet-popup-tip-container { display: none; }
@@ -828,8 +840,8 @@ a { color: inherit; }
 .popup-photo {
   display: block;
   position: relative;
-  height: 132px;
-  margin: 10px 14px 0;
+  height: 101px;
+  margin: 8px 12px 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -840,7 +852,7 @@ a { color: inherit; }
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .popup-photo-fallback {
