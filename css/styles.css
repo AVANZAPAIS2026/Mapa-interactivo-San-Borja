@@ -760,6 +760,36 @@ a { color: inherit; }
 
 .lt-tip b { color: var(--primary); }
 
+.module-marker {
+  position: relative;
+  width: 28px;
+  height: 34px;
+  filter: drop-shadow(0 4px 8px rgba(23, 32, 51, .32));
+}
+
+.module-marker::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 0;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  background: var(--accent);
+  transform: rotate(-45deg);
+}
+
+.module-marker div {
+  position: absolute;
+  left: 12px;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
 .leaflet-popup-content-wrapper {
   background: #fff !important;
   border: 1px solid var(--border) !important;

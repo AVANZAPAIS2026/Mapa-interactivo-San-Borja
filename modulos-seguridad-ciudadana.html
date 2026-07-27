@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Roberth Montoya | Módulos de Seguridad Ciudadana</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <link rel="stylesheet" href="css/styles.css?v=20260522-landing"/>
+</head>
+<body class="map-page">
+  <nav class="site-nav" aria-label="Navegación principal">
+    <div class="nav-inner">
+      <a class="brand" href="index.html" aria-label="Ir al inicio">
+        <span class="brand-mark">RM</span>
+        <span>Roberth Montoya</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-label="Abrir menú" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <ul class="nav-menu">
+        <li><a class="nav-link" href="index.html">Inicio</a></li>
+        <li><a class="nav-link" href="avance-campana.html">Avance Campaña</a></li>
+        <li><a class="nav-link" href="presencia-publicitaria.html">Presencia Publicitaria</a></li>
+        <li><a class="nav-link" href="indices-criminalidad-san-borja.html">Índices de Criminalidad</a></li>
+        <li><a class="nav-link active" href="modulos-seguridad-ciudadana.html" aria-current="page">Módulos de Seguridad</a></li>
+        <li><a class="nav-link" href="sectores.html">Sectores y Sub-sectores</a></li>
+        <li><a class="nav-link" href="actividades.html">Actividades</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div id="loader"><div><div class="spin"></div><div class="spin-txt">Cargando mapa y datos...</div></div></div>
+
+  <header class="map-header">
+    <div class="map-header-top">
+      <div class="map-title">
+        <h1>Módulos de Seguridad Ciudadana</h1>
+        <div class="district">Distrito de San Borja · Lima, Perú</div>
+      </div>
+      <div id="hdr-count">Sin datos</div>
+    </div>
+    <div class="header-legend">
+      <div class="blk-title">Capas</div>
+      <div class="leg-grid" id="leg-grid"></div>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script>
+    const nav = document.querySelector('.site-nav');
+    const toggle = document.querySelector('.nav-toggle');
+    toggle.addEventListener('click', () => {
+      const isOpen = nav.classList.toggle('open');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    const COL = {
+      latitud: 'latitud',
+      longitud: 'longitud',
+      sector: 'sector',
+      subsector: 'subsector',
+      nombre: 'nombre',
+    };
+
+    const LAT_KEYS = ['latitud', 'latitude', 'lat'];
+    const LON_KEYS = ['longitud', 'longitude', 'lng', 'lon', 'long'];
+
+    const BLOCK_COLOR = '#454546';
+    const GREEN_AREA_COLOR = '#2F9E44';
+    const GREEN_AREA_BORDER = '#1F7A35';
+    const MODULE_COLOR = '#DB1774';
+    const SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcCVzStyWMu3K5-IpG1z_rMDRmpmAnRG9nmSD_nzM6j6B_NoO2o0sSvqqETBf8TrA43J-pLqD3G8Vx/pub?gid=1410278485&single=true&output=tsv';
+    const GEOJSON_PATH = 'data/manzanas_areas_verdes_unificado.geojson';
+
+    let map, baseLayer, markersLayer;
+    let geojsonData = null;
+    let rows = [];
+
+    function initMap() {
+      map = L.map('map', { zoomControl: true })
+        .setView([-12.105, -76.990], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
+
+      renderLegend();
+      loadData();
+    }
+
+    async function loadData() {
+      try {
+        await loadGeoJSON();
+        await fetchFromSheets(SHEETS_URL);
+      } catch (err) {
+        document.getElementById('hdr-count').textContent = `Error: ${err.message}`;
+        console.error(err);
+      } finally {
+        document.getElementById('loader').classList.add('gone');
+      }
+    }
+
+    async function loadGeoJSON() {
+      const resp = await fetch(GEOJSON_PATH, { cache: 'no-cache' });
+      if (!resp.ok) throw new Error(`GeoJSON HTTP ${resp.status}`);
+
+      geojsonData = await resp.json();
+      if (!geojsonData || !Array.isArray(geojsonData.features)) {
+        throw new Error('GeoJSON inválido');
+      }
+
+      baseLayer = L.geoJSON(geojsonData, {
+        style: layerStyle,
+        interactive: false,
+      }).addTo(map);
+
+      if (geojsonData.features.length > 0) {
+        map.fitBounds(baseLayer.getBounds(), { padding: [20, 20] });
+      }
+
+      updateCount(0);
+    }
+
+    async function fetchFromSheets(url) {
+      const resp = await fetch(url, { cache: 'no-cache' });
+      if (!resp.ok) throw new Error(`Sheets HTTP ${resp.status}`);
+
+      const text = await resp.text();
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, delimiter: '' });
+      if (!parsed.data.length) {
+        rows = [];
+        updateCount(0);
+        return;
+      }
+
+      rows = parsed.data.map(row => {
+        const normalized = {};
+        for (const key in row) normalized[norm(key)] = row[key];
+        return normalized;
+      });
+
+      renderMarkers();
+    }
+
+    function layerStyle(feature) {
+      const isGreenArea = isGreenAreaFeature(feature);
+      return {
+        color: isGreenArea ? GREEN_AREA_BORDER : BLOCK_COLOR,
+        weight: isGreenArea ? 1 : .7,
+        fillColor: isGreenArea ? GREEN_AREA_COLOR : BLOCK_COLOR,
+        fillOpacity: isGreenArea ? .62 : .42,
+      };
+    }
+
+    function isGreenAreaFeature(feature) {
+      const source = String(feature?.properties?.capa_origen || feature?.properties?.ARCHIVO || '').toLowerCase();
+      return source.includes('areas_verdes') || source.includes('areas verdes');
+    }
+
+    function renderMarkers() {
+      if (markersLayer) {
+        map.removeLayer(markersLayer);
+        markersLayer = null;
+      }
+
+      const valid = rows
+        .map(row => ({ row, coords: getRowLatLon(row) }))
+        .filter(item => item.coords);
+
+      const markers = valid.map(({ row, coords }) => {
+        const icon = L.divIcon({
+          className: '',
+          html: '<div class="module-marker"><div></div></div>',
+          iconSize: [28, 34],
+          iconAnchor: [14, 32],
+          popupAnchor: [0, -30],
+        });
+
+        const marker = L.marker([coords.lat, coords.lon], { icon });
+        marker.bindTooltip(`<b>${row[COL.nombre] || 'Módulo'}</b> · Sector ${row[COL.sector] || '-'}`, {
+          className: 'lt-tip',
+          sticky: true,
+        });
+        marker.on('click', () => openModulePopup(marker.getLatLng(), row, coords));
+        return marker;
+      });
+
+      markersLayer = L.layerGroup(markers).addTo(map);
+      updateCount(valid.length);
+    }
+
+    function openModulePopup(latlng, row, coords) {
+      L.popup({ maxWidth: 300, minWidth: 280 })
+        .setLatLng(latlng)
+        .setContent(`
+          <div>
+            <div class="popup-header">
+              <div class="popup-sector-badge" style="background:${MODULE_COLOR}">M</div>
+              <div class="popup-header-info">
+                <div class="ph-label">Módulo de seguridad ciudadana</div>
+                <div class="ph-title">${row[COL.nombre] || 'Sin nombre'}</div>
+              </div>
+            </div>
+            <div class="popup-body">
+              <div class="popup-row">
+                <div class="pr-icon">N</div>
+                <div class="pr-content"><div class="pr-key">Nombre</div><div class="pr-val">${row[COL.nombre] || '-'}</div></div>
+              </div>
+              <div class="popup-row">
+                <div class="pr-icon">S</div>
+                <div class="pr-content"><div class="pr-key">Sector</div><div class="pr-val">${row[COL.sector] || '-'}</div></div>
+              </div>
+              <div class="popup-row">
+                <div class="pr-icon">Z</div>
+                <div class="pr-content"><div class="pr-key">Subsector</div><div class="pr-val">${row[COL.subsector] || '-'}</div></div>
+              </div>
+            </div>
+            <div class="popup-footer">
+              <span class="pf-coords">${coords.lat.toFixed(5)}, ${coords.lon.toFixed(5)}</span>
+              <span class="pf-lote">Marcador</span>
+            </div>
+          </div>`)
+        .openOn(map);
+    }
+
+    function updateCount(moduleCount) {
+      const features = geojsonData?.features?.length || 0;
+      document.getElementById('hdr-count').textContent =
+        `${features.toLocaleString()} polígonos · ${moduleCount} módulos`;
+    }
+
+    function renderLegend() {
+      const grid = document.getElementById('leg-grid');
+      grid.innerHTML = '';
+      [
+        ['Manzanas', BLOCK_COLOR, 'Polígonos base'],
+        ['Áreas verdes', GREEN_AREA_COLOR, 'Polígonos verdes'],
+        ['Módulos', MODULE_COLOR, 'Marcadores'],
+      ].forEach(([name, color, count]) => {
+        const div = document.createElement('div');
+        div.className = 'leg-item active';
+        div.innerHTML = `
+          <div class="leg-dot" style="background:${color}"></div>
+          <div>
+            <div class="leg-name">${name}</div>
+            <div class="leg-count">${count}</div>
+          </div>`;
+        grid.appendChild(div);
+      });
+    }
+
+    function norm(key) {
+      return String(key || '').toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\w]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .trim();
+    }
+
+    function parseNumber(value) {
+      if (value === null || value === undefined) return NaN;
+      if (typeof value === 'number') return value;
+      const cleaned = String(value)
+        .trim()
+        .replace(',', '.')
+        .match(/-?\d+(?:\.\d+)?/);
+      return cleaned ? parseFloat(cleaned[0]) : NaN;
+    }
+
+    function findValue(row, keys) {
+      for (const key of keys) {
+        if (row[key] !== undefined && row[key] !== '') return row[key];
+      }
+      return undefined;
+    }
+
+    function getRowLatLon(row) {
+      const lat = parseNumber(findValue(row, LAT_KEYS));
+      const lon = parseNumber(findValue(row, LON_KEYS));
+      if (Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180) {
+        return { lat, lon };
+      }
+      return null;
+    }
+
+    window.addEventListener('DOMContentLoaded', initMap);
+  </script>
+</body>
+</html>
