@@ -40,7 +40,7 @@
       <div id="hdr-count">Sin datos</div>
     </div>
     <div class="header-legend">
-      <div class="blk-title">Capas</div>
+      <div class="blk-title">Módulos por sector</div>
       <div class="leg-grid" id="leg-grid"></div>
     </div>
   </header>
@@ -134,6 +134,7 @@
       if (!parsed.data.length) {
         rows = [];
         updateCount(0);
+        renderLegend([]);
         return;
       }
 
@@ -191,6 +192,7 @@
 
       markersLayer = L.layerGroup(markers).addTo(map);
       updateCount(valid.length);
+      renderLegend(valid);
     }
 
     function openModulePopup(latlng, row, coords) {
@@ -233,21 +235,44 @@
         `${features.toLocaleString()} polígonos · ${moduleCount} módulos`;
     }
 
-    function renderLegend() {
+    function renderLegend(validModules = []) {
       const grid = document.getElementById('leg-grid');
       grid.innerHTML = '';
-      [
-        ['Manzanas', BLOCK_COLOR, 'Polígonos base'],
-        ['Áreas verdes', GREEN_AREA_COLOR, 'Polígonos verdes'],
-        ['Módulos', MODULE_COLOR, 'Marcadores'],
-      ].forEach(([name, color, count]) => {
+
+      const sectorCounts = validModules.reduce((acc, item) => {
+        const sector = String(item.row[COL.sector] || '').trim() || 'Sin sector';
+        acc[sector] = (acc[sector] || 0) + 1;
+        return acc;
+      }, {});
+
+      const entries = Object.entries(sectorCounts).sort((a, b) => {
+        const aNum = parseInt(a[0], 10);
+        const bNum = parseInt(b[0], 10);
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+        return a[0].localeCompare(b[0], 'es');
+      });
+
+      if (!entries.length) {
+        const div = document.createElement('div');
+        div.className = 'leg-item';
+        div.innerHTML = `
+          <div class="leg-dot" style="background:${MODULE_COLOR}"></div>
+          <div>
+            <div class="leg-name">Sin módulos</div>
+            <div class="leg-count">-</div>
+          </div>`;
+        grid.appendChild(div);
+        return;
+      }
+
+      entries.forEach(([sector, count]) => {
         const div = document.createElement('div');
         div.className = 'leg-item active';
         div.innerHTML = `
-          <div class="leg-dot" style="background:${color}"></div>
+          <div class="leg-dot" style="background:${MODULE_COLOR}"></div>
           <div>
-            <div class="leg-name">${name}</div>
-            <div class="leg-count">${count}</div>
+            <div class="leg-name">Sector ${sector}</div>
+            <div class="leg-count">${count} módulo${count !== 1 ? 's' : ''}</div>
           </div>`;
         grid.appendChild(div);
       });
