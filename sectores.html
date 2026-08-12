@@ -38,6 +38,7 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    .search-box button:disabled { opacity: .65; cursor: wait; }
     #search-result {
       display: none;
       border-top: 1px solid #eee;
@@ -91,8 +92,8 @@
 
   <div class="search-panel">
     <div class="search-box">
-      <input type="text" id="addr-input" placeholder="Ingresa tu dirección (ej: Av. San Borja Norte 123)">
-      <button onclick="buscarDireccion()">🔍</button>
+      <input type="search" id="addr-input" placeholder="Busca una dirección o lugar (ej: Parque de la Familia)" aria-label="Dirección o nombre del lugar">
+      <button type="button" onclick="buscarDireccion()" aria-label="Buscar">🔍</button>
     </div>
     <div id="search-result">
       <div class="result-badge">
@@ -278,27 +279,72 @@
         }
     }
 
+    function buscarFeatureEnPunto(lat, lon) {
+      if (!unificadoData) return null;
+      const point = turf.point([Number(lon), Number(lat)]);
+      return unificadoData.features.find(feature => {
+        try {
+          return turf.booleanPointInPolygon(point, feature);
+        } catch (_) {
+          return false;
+        }
+      }) || null;
+    }
+
+    function claveCandidato(candidate) {
+      const location = candidate.location || {};
+      return `${Number(location.x).toFixed(6)},${Number(location.y).toFixed(6)}`;
+    }
+
+    async function obtenerCandidatos(texto) {
+      // La primera consulta da contexto local; la segunda ayuda a encontrar POI cuyo
+      // nombre oficial ya incluye distrito o ciudad (parques, colegios, mercados, etc.).
+      const consultas = [`${texto}, San Borja, Lima, Peru`, texto];
+      const requests = consultas.map(singleLine => {
+        const params = new URLSearchParams({
+          f: 'json',
+          singleLine,
+          maxLocations: '10',
+          outFields: 'Match_addr,Addr_type,PlaceName',
+          location: '-76.997,-12.107',
+          distance: '12000'
+        });
+        return fetch(`https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?${params}`)
+          .then(response => {
+            if (!response.ok) throw new Error(`Error ${response.status} del buscador`);
+            return response.json();
+          })
+          .then(data => data.candidates || []);
+      });
+
+      const results = (await Promise.allSettled(requests))
+        .filter(result => result.status === 'fulfilled')
+        .flatMap(result => result.value);
+      const unique = new Map(results.map(candidate => [claveCandidato(candidate), candidate]));
+
+      return [...unique.values()].sort((a, b) => {
+        const aEnSanBorja = Boolean(buscarFeatureEnPunto(a.location.y, a.location.x));
+        const bEnSanBorja = Boolean(buscarFeatureEnPunto(b.location.y, b.location.x));
+        return Number(bEnSanBorja) - Number(aEnSanBorja) || (b.score || 0) - (a.score || 0);
+      });
+    }
+
     async function buscarDireccion() {
-      const input = document.getElementById('addr-input').value;
+      const input = document.getElementById('addr-input').value.trim();
       if (!input) return;
 
       const btn = document.querySelector('.search-box button');
       btn.textContent = "...";
+      btn.disabled = true;
 
       try {
-        // Motor de búsqueda de Esri (ArcGIS) - Mucho más preciso para numeración en Lima
-        const query = `${input}, San Borja, Lima, Peru`;
-        const url = `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${encodeURIComponent(query)}&maxLocations=1&outFields=Match_addr,Addr_type`;
-        
-        const resp = await fetch(url);
-        const data = await resp.json();
-
-        if (!data.candidates || data.candidates.length === 0) {
-          alert("No se encontró la dirección. Intenta ser más específico.");
+        const candidates = await obtenerCandidatos(input);
+        if (!candidates.length) {
+          alert("No se encontró la dirección o lugar. Intenta agregar una referencia, por ejemplo: parque, avenida o San Borja.");
           return;
         }
 
-        const candidate = data.candidates[0];
+        const candidate = candidates[0];
         const { x, y } = candidate.location;
         
         // 1. Ubicar en el mapa basándose en la coordenada exacta
@@ -309,10 +355,16 @@
 
       } catch (err) {
         console.error(err);
+        alert("No se pudo realizar la búsqueda. Revisa tu conexión e inténtalo nuevamente.");
       } finally {
         btn.textContent = "🔍";
+        btn.disabled = false;
       }
     }
+
+    document.getElementById('addr-input').addEventListener('keydown', event => {
+      if (event.key === 'Enter') buscarDireccion();
+    });
   </script>
 </body>
 </html>
